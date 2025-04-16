@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Validation", "Vali-Validation\Vali-Validation.csproj", "{C9A27CEA-E2CA-4078-A71D-37933AAE8166}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vali-Validation-Test", "Vali-Validation-Test\Vali-Validation-Test.csproj", "{3AB62C20-A3AC-4B98-84CD-8BAF9E1D5C0B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C9A27CEA-E2CA-4078-A71D-37933AAE8166}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9A27CEA-E2CA-4078-A71D-37933AAE8166}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9A27CEA-E2CA-4078-A71D-37933AAE8166}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9A27CEA-E2CA-4078-A71D-37933AAE8166}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3AB62C20-A3AC-4B98-84CD-8BAF9E1D5C0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3AB62C20-A3AC-4B98-84CD-8BAF9E1D5C0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3AB62C20-A3AC-4B98-84CD-8BAF9E1D5C0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3AB62C20-A3AC-4B98-84CD-8BAF9E1D5C0B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

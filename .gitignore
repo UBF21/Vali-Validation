@@ -1,0 +1,13 @@
+# Ignorar carpetas de compilación
+bin/
+obj/
+
+# Ignorar archivos de configuración de usuario
+*.user
+*.suo
+
+# Ignorar archivos de paquetes
+packages/
+
+# Ignorar la carpeta .idea
+.idea/

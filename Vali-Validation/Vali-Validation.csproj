@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
+        <RootNamespace>Vali_Validation</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Title>Vali-Validation</Title>
+        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+        <Description>
+            Vali-Validation is a lightweight and extensible .NET validation library designed as an alternative to FluentValidation. It provides a fluent and expressive API to define validation rules for objects and properties in a clear and intuitive way. Supporting common validation scenarios like null checks, string patterns, date and numeric constraints, and collection rules, Vali-Validation is optimized for maintainability and scalability. It integrates seamlessly into .NET applications with support for dependency injection and is ideal for projects following clean or onion architecture.
+        </Description>
+        <PackageProjectUrl>#</PackageProjectUrl>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/UBF21/Vali-Validation</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReleaseNotes>
+            Vali-Validation v1.0.0 introduces a lightweight, expressive, and extensible validation framework for .NET developers:
+            - Fluent, chainable syntax for defining validation rules with clarity and precision.
+            - Built-in support for common scenarios: null checks, empty values, length restrictions, regular expressions, numeric comparisons, date validations, and collection rules.
+            - Designed to integrate seamlessly into projects using Onion or Clean Architecture, promoting separation of concerns through validator classes.
+            - Compatible with .NET Standard 2.0 and above, ensuring broad framework support.
+            - Ideal alternative to FluentValidation, with simpler customization and a focus on maintainability.
+
+            Vali-Validation empowers developers to write clean, testable, and reusable validation logic across applications.
+        </PackageReleaseNotes>
+        <PackageTags>validation;lib;rules;utility</PackageTags>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+        <Version>1.0.0</Version>
+        <PackageIcon>logo_vali_validation.png</PackageIcon>
+        <PackageId>Vali-Validation</PackageId>
+        <Product>Vali-Validation</Product>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="logo_vali_validation.png">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+    </ItemGroup>
+</Project>
