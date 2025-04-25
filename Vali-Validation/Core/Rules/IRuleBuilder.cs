@@ -1,3 +1,6 @@
+using System.Linq.Expressions;
+using Vali_Validation.Core.Validators;
+
 namespace Vali_Validation.Core.Rules;
 
 /// <summary>
@@ -188,4 +191,30 @@ public interface IRuleBuilder<T, TProperty> where T : class
     /// Validates that a collection is not empty.
     /// </summary>
     RuleBuilder<T, TProperty> NotEmptyCollection();
+
+    /// <summary>
+    /// Validates the value using an asynchronous boolean predicate.
+    /// </summary>
+    /// <param name="predicateAsync">A function that defines the async validation logic.</param>
+    public RuleBuilder<T, TProperty> MustAsync(Func<TProperty, Task<bool>> predicateAsync);
+
+    /// <summary>
+    /// Defines an asynchronous validation rule that evaluates a property in relation to another property of the object using an asynchronous predicate.
+    /// The rule checks that the primary property satisfies a condition dependent on the value of a secondary property, with the evaluation performed asynchronously.
+    /// </summary>
+    /// <typeparam name="TDependent">The type of the dependent property.</typeparam>
+    /// <param name="propertyExpression">A lambda expression identifying the primary property to validate (e.g., <c>x => x.Email</c>).</param>
+    /// <param name="dependentPropertyExpression">A lambda expression identifying the dependent property whose relationship will be evaluated (e.g., <c>x => x.Username</c>).</param>
+    /// <param name="predicateAsync">An asynchronous predicate that takes the values of the primary and dependent properties, returning <c>true</c> if the validation succeeds or <c>false</c> if it fails.</param>
+    /// <returns>The same <see cref="RuleBuilder{T, TProperty}"/> to allow fluent chaining of validation rules.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="propertyExpression"/>, <paramref name="dependentPropertyExpression"/>, or <paramref name="predicateAsync"/> is <c>null</c>.</exception>
+    /// <remarks>
+    /// <para>The method registers an asynchronous rule in the associated validator, which is executed during synchronous (<see cref="AbstractValidator{T}.Validate(T)"/>) or asynchronous (<see cref="AbstractValidator{T}.ValidateAsync(T)"/>) validation.</para>
+    /// <para>Property names are automatically extracted from the expressions to generate precise error messages.</para>
+    /// <para>The default error message is "The field {propertyName} does not meet the condition dependent on {dependentPropertyName}.", but it can be customized using <see cref="WithMessage(string)"/>.</para>
+    /// </remarks>
+    public RuleBuilder<T, TProperty> DependentRuleAsync<TDependent>(
+        Expression<Func<T, TProperty>> propertyExpression,
+        Expression<Func<T, TDependent>> dependentPropertyExpression,
+        Func<TProperty, TDependent, Task<bool>> predicateAsync);
 }

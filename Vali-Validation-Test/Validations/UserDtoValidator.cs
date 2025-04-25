@@ -10,6 +10,15 @@ public class UserDtoValidator : AbstractValidator<UserDto>
         RuleFor(x => x.Name)
             .NotEmpty()
             .NotNull()
+            .DependentRuleAsync(
+                x => x.Email,
+                x => x.Name,
+                async (email, name) =>
+                {
+                    await Task.Delay(50);
+                    return email.StartsWith(name);
+                }
+            )
             .MinimumLength(3);
 
         RuleFor(x => x.Email)
