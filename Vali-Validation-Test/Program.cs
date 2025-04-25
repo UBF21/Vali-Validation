@@ -3,7 +3,7 @@
 using Vali_Validation_Test.Models;
 using Vali_Validation_Test.Validations;
 
-var user = new UserDto { Name = "ASS", Email = "correo-invalido",Age = 0};
+var user = new UserDto { Name = "Peruzuela", Email = "venezuela",Age = 0};
 var validator = new UserDtoValidator();
 var result = validator.Validate(user);
 

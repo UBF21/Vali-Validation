@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Vali_Validation.Core.Results;
 using Vali_Validation.Core.Utils;
@@ -326,6 +327,63 @@ public class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> where T : cl
         _currentCondition = value =>
             value is System.Collections.IEnumerable enumerable && enumerable.Cast<object>().Any();
         _currentMessage = $"The {_propertyName} field must not be an empty collection.";
+        AddCurrentCondition();
+        return this;
+    }
+
+    public RuleBuilder<T, TProperty> MustAsync(Func<TProperty, Task<bool>> predicateAsync)
+    {
+        if (predicateAsync == null) throw new ArgumentNullException(nameof(predicateAsync));
+        
+        _validator.AddRule(async instance =>
+        {
+            ValidationResult result = new ValidationResult();
+            TProperty value = _propertyFunc(instance);
+
+            bool isValid = await predicateAsync(value).ConfigureAwait(false);
+            if (!isValid)
+            {
+                string message = _currentMessage ?? $"The field {_propertyName} does not meet the specified condition.";
+                result.AddError(_propertyName, message);
+            }
+            return result;
+        });
+        AddCurrentCondition();
+        return this;
+    }
+
+    public RuleBuilder<T, TProperty> DependentRuleAsync<TDependent>(
+        Expression<Func<T, TProperty>> propertyExpression, 
+        Expression<Func<T, TDependent>> dependentPropertyExpression,
+        Func<TProperty, TDependent, Task<bool>> predicateAsync)
+    {
+        if (predicateAsync == null) throw new ArgumentNullException(nameof(predicateAsync));
+        if (propertyExpression == null) throw new ArgumentNullException(nameof(propertyExpression));
+        if (dependentPropertyExpression == null) throw new ArgumentNullException(nameof(dependentPropertyExpression));
+        
+        // Extraer el nombre de la propiedad principal
+        var propertyName = ((MemberExpression)propertyExpression.Body).Member.Name;
+        var propertyFunc = propertyExpression.Compile();
+        
+        // Extraer el nombre de la propiedad dependiente
+        var dependentPropertyName = ((MemberExpression)dependentPropertyExpression.Body).Member.Name;
+        var dependentFunc = dependentPropertyExpression.Compile();
+        
+        _validator.AddRule(async instance =>
+        {
+            ValidationResult result = new ValidationResult();
+            TProperty value = propertyFunc(instance);
+            TDependent dependentValue = dependentFunc(instance);
+
+            bool isValid = await predicateAsync(value, dependentValue).ConfigureAwait(false);
+            if (!isValid)
+            {
+                string message = _currentMessage ?? $"The field {propertyName} does not meet the dependent condition of {dependentPropertyName}.";
+                result.AddError(propertyName, message);
+            }
+
+            return result;
+        });
         AddCurrentCondition();
         return this;
     }
