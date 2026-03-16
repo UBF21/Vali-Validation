@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
+        <RootNamespace>Vali_Validation.MediatR</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <!-- Package identity -->
+        <PackageId>Vali-Validation.MediatR</PackageId>
+        <Version>1.0.0</Version>
+        <Title>Vali-Validation.MediatR</Title>
+        <Product>Vali-Validation.MediatR</Product>
+        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+
+        <!-- Repository -->
+        <RepositoryUrl>https://github.com/UBF21/Vali-Validation</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://vali-validation-docs.netlify.app/docs/mediatr-integration</PackageProjectUrl>
+
+        <!-- License -->
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+
+        <!-- Source Link / Symbols -->
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <DebugType>embedded</DebugType>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+
+        <!-- Discoverability -->
+        <PackageTags>validation;fluent;mediatr;pipeline;behavior;dotnet;vali;cqrs</PackageTags>
+        <PackageIcon>VV.png</PackageIcon>
+
+        <Description>
+            MediatR integration for Vali-Validation. Adds a ValidationBehavior&lt;TRequest, TResponse&gt;
+            pipeline behavior that automatically validates IRequest objects using Vali-Validation
+            before they reach their handler. Throws ValidationException on failure.
+            Use Vali-Mediator.Validation instead if you use Vali-Mediator — it provides
+            richer integration with Result&lt;T&gt; support (no exceptions needed).
+        </Description>
+
+        <PackageReleaseNotes>
+            v1.0.0 — Initial release.
+            - ValidationBehavior&lt;TRequest, TResponse&gt; implementing MediatR IPipelineBehavior.
+            - Validates request via IValidator&lt;TRequest&gt; resolved from DI.
+            - Throws ValidationException if validation fails (use Vali-Mediator.Validation for Result-based flow).
+            - AddMediatRWithValidation() convenience extension for one-call registration.
+            - AddValiValidationBehavior() for manual MediatR setup.
+        </PackageReleaseNotes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="VV.png">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+        <None Include="README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Vali-Validation\Vali-Validation.csproj" />
+        <PackageReference Include="MediatR" Version="12.4.1" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    </ItemGroup>
+
+</Project>
