@@ -5,36 +5,34 @@ using Vali_Validation.Core.Validators;
 namespace Vali_Validation.Core.Extensions;
 
 /// <summary>
-/// Provides extension methods for registering Vali-Validation validators into the service collection.
+/// Extension methods for registering Vali-Validation validators into the DI container.
 /// </summary>
 public static class ValiValidationExtension
 {
-    
     /// <summary>
-    /// Registers all validator implementations from the specified assembly into the dependency injection container.
-    /// 
-    /// It scans the provided assembly for all non-abstract, non-interface classes that implement
-    /// the <c>IValidator&lt;T&gt;</c> interface and registers them with <c>Transient</c> lifetime.
-    /// 
-    /// This method enables automatic discovery and registration of validation rules following
-    /// the Vali-Validation pattern, similar to FluentValidation's registration behavior.
+    /// Scans <paramref name="assembly"/> for all non-abstract, non-interface classes that implement
+    /// <c>IValidator&lt;T&gt;</c> and registers them with the specified <paramref name="lifetime"/>.
     /// </summary>
     /// <param name="services">The service collection to add validators to.</param>
     /// <param name="assembly">The assembly to scan for validator implementations.</param>
-    /// <returns>The modified <see cref="IServiceCollection"/> for chaining.</returns>
-    public static IServiceCollection AddValidationsFromAssembly(this IServiceCollection services, Assembly assembly)
+    /// <param name="lifetime">
+    /// The service lifetime to use. Defaults to <see cref="ServiceLifetime.Transient"/>,
+    /// which is correct for validators since each validation is independent.
+    /// </param>
+    public static IServiceCollection AddValidationsFromAssembly(
+        this IServiceCollection services,
+        Assembly assembly,
+        ServiceLifetime lifetime = ServiceLifetime.Transient)
     {
-        var validatorTypes = assembly
+        var registrations = assembly
             .GetTypes()
             .Where(t => t is { IsAbstract: false, IsInterface: false })
             .SelectMany(t => t.GetInterfaces()
                 .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>))
                 .Select(i => new { InterfaceType = i, ImplementationType = t }));
 
-        foreach (var validator in validatorTypes)
-        {
-            services.AddTransient(validator.InterfaceType, validator.ImplementationType);
-        }
+        foreach (var reg in registrations)
+            services.Add(ServiceDescriptor.Describe(reg.InterfaceType, reg.ImplementationType, lifetime));
 
         return services;
     }

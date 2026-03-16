@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
+        <RootNamespace>Vali_Validation.ValiMediator</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <!-- Package identity -->
+        <PackageId>Vali-Validation.ValiMediator</PackageId>
+        <Version>1.0.0</Version>
+        <Title>Vali-Validation.ValiMediator</Title>
+        <Product>Vali-Validation.ValiMediator</Product>
+        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+
+        <!-- Repository -->
+        <RepositoryUrl>https://github.com/UBF21/Vali-Validation</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://vali-validation-docs.netlify.app/docs/valimediator-integration</PackageProjectUrl>
+
+        <!-- License -->
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+
+        <!-- Source Link / Symbols -->
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <DebugType>embedded</DebugType>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+
+        <!-- Discoverability -->
+        <PackageTags>validation;fluent;vali-validation;pipeline;behavior;dotnet;vali;cqrs;result</PackageTags>
+        <PackageIcon>VV.png</PackageIcon>
+
+        <Description>
+            Vali-Mediator integration for Vali-Validation. Adds a ValidationBehavior&lt;TRequest, TResponse&gt;
+            that validates IRequest objects before they reach their handler.
+            When TResponse is Result&lt;T&gt;, validation failures are returned as Result.Fail(errors, ErrorType.Validation)
+            — no exceptions needed. For other response types, throws ValidationException.
+            Package name: Vali-Validation.ValiMediator. Requires Vali-Mediator.
+        </Description>
+
+        <PackageReleaseNotes>
+            v1.0.0 — Initial release of Vali-Validation.ValiMediator.
+            - ValidationBehavior&lt;TRequest, TResponse&gt; implementing Vali-Mediator IPipelineBehavior.
+            - Validates request via IValidator&lt;TRequest&gt; resolved from DI.
+            - When TResponse is Result&lt;T&gt;: returns Result.Fail(errors, ErrorType.Validation) — no throw.
+            - When TResponse is any other type: throws ValidationException.
+            - AddValiValidationBehavior() extension on ValiMediatorConfiguration.
+            - AddValiMediatorWithValidation() convenience extension on IServiceCollection.
+        </PackageReleaseNotes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="VV.png">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+        <None Include="README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Vali-Validation\Vali-Validation.csproj" />
+        <ProjectReference Include="..\..\Vali-Mediator\Vali-Mediator\Vali-Mediator.csproj" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    </ItemGroup>
+
+</Project>

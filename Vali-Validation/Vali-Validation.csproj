@@ -1,46 +1,90 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
         <RootNamespace>Vali_Validation</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+
+        <!-- Package identity -->
+        <PackageId>Vali-Validation</PackageId>
+        <Version>2.0.0</Version>
         <Title>Vali-Validation</Title>
+        <Product>Vali-Validation</Product>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
-        <Description>
-            Vali-Validation is a lightweight and extensible .NET validation library designed as an alternative to FluentValidation. It provides a fluent and expressive API to define validation rules for objects and properties in a clear and intuitive way. Supporting common validation scenarios like null checks, string patterns, date and numeric constraints, and collection rules, Vali-Validation is optimized for maintainability and scalability. It integrates seamlessly into .NET applications with support for dependency injection and is ideal for projects following clean or onion architecture.
-        </Description>
-        <PackageProjectUrl>#</PackageProjectUrl>
-        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
+
+        <!-- Repository -->
         <RepositoryUrl>https://github.com/UBF21/Vali-Validation</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageReleaseNotes>
-            Vali-Validation v1.0.0 introduces a lightweight, expressive, and extensible validation framework for .NET developers:
-            - Fluent, chainable syntax for defining validation rules with clarity and precision.
-            - Built-in support for common scenarios: null checks, empty values, length restrictions, regular expressions, numeric comparisons, date validations, and collection rules.
-            - Designed to integrate seamlessly into projects using Onion or Clean Architecture, promoting separation of concerns through validator classes.
-            - Compatible with .NET Standard 2.0 and above, ensuring broad framework support.
-            - Ideal alternative to FluentValidation, with simpler customization and a focus on maintainability.
+        <PackageProjectUrl>https://vali-validation-docs.netlify.app/</PackageProjectUrl>
 
-            Vali-Validation empowers developers to write clean, testable, and reusable validation logic across applications.
-        </PackageReleaseNotes>
-        <PackageTags>validation;lib;rules;utility</PackageTags>
+        <!-- License -->
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Copyright>Copyright © 2025 - FM. All rights reserved.</Copyright>
-        <Version>1.0.0</Version>
-        <PackageIcon>logo_vali_validation.png</PackageIcon>
-        <PackageId>Vali-Validation</PackageId>
-        <Product>Vali-Validation</Product>
+
+        <!-- Discoverability -->
+        <PackageTags>validation;fluent;rules;dotnet;di;clean-architecture;vali</PackageTags>
+        <PackageIcon>VV.png</PackageIcon>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+
+        <!-- Source Link / Symbols -->
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <DebugType>embedded</DebugType>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <Description>
+            Lightweight, zero-dependency fluent validation library for .NET 7/8/9.
+            Alternative to FluentValidation with async support, conditional rules (When/Unless),
+            cascade mode, nested object validation, collection validation (RuleForEach),
+            and seamless DI registration — all without external dependencies beyond
+            Microsoft.Extensions.DependencyInjection.Abstractions.
+        </Description>
+
+        <PackageReleaseNotes>
+            v2.0.0 — Major improvements and new features:
+
+            Bug fixes:
+            - ValidateAsync now exposed on IValidator&lt;T&gt; interface (was missing).
+            - Validate() no longer deadlocks in ASP.NET Core: sync and async rules run in separate lists.
+            - LessThan() had wrong error message ("greater than") — fixed.
+            - Positive() no longer accepts zero (semantics fix).
+            - Expression body crash fixed for non-MemberExpression selectors (e.g. x =&gt; x.Name.ToLower()).
+            - MustAsync no longer registers an empty sync delegate unnecessarily.
+            - isValidAlpha renamed to IsValidAlpha (naming convention fix).
+
+            Design improvements:
+            - ValidationResult.Errors changed from Dictionary&lt;string, List&lt;string?&gt;&gt; to List&lt;string&gt; (errors are never null).
+            - Constants.cs removed (Zero/One literals added no value).
+            - AddValidationsFromAssembly now accepts optional ServiceLifetime parameter (default Transient).
+            - New ValidationException typed exception in Core/Exceptions/.
+            - ValidateAndThrow() and ValidateAndThrowAsync() added to AbstractValidator.
+
+            New features:
+            - When(Func&lt;T, bool&gt;) / Unless(Func&lt;T, bool&gt;) — conditional rule execution.
+            - StopOnFirstFailure() — stop evaluating rules for a property after first failure.
+            - SetValidator(AbstractValidator&lt;TProperty&gt;) — delegate validation to nested validators.
+            - RuleForEach(x =&gt; x.Collection) — validate each element with indexed error keys (Items[0]).
+            - OverridePropertyName(string) — control the error key in ValidationResult.Errors.
+        </PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="logo_vali_validation.png">
+        <None Include="VV.png">
             <Pack>True</Pack>
             <PackagePath></PackagePath>
+        </None>
+        <None Include="README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
         </None>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>
+
 </Project>
