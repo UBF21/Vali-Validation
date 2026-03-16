@@ -1,4 +1,4 @@
-# <img src="https://github.com/UBF21/Vali-Validation/blob/main/Vali-Validation/logo_vali_validation.png?raw=true" alt="Logo de Vali Mediator" style="width: 46px; height: 46px; max-width: 300px;"> Vali-Validation – Lightweight Validation Library for .NET
+# <img src="https://github.com/UBF21/Vali-Validation/blob/main/Vali-Validation/VV.png?raw=true" alt="Logo de Vali Validation" style="width: 46px; height: 46px; max-width: 300px;"> Vali-Validation – Lightweight Validation Library for .NET
 
 
 ## Introduction 🚀
