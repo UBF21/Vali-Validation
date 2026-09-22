@@ -33,6 +33,22 @@ public class RejectingPreValidateValidator : AbstractValidator<PreValidateDto>
     }
 }
 
+public class SilentPassPreValidateValidator : AbstractValidator<PreValidateDto>
+{
+    public SilentPassPreValidateValidator()
+    {
+        RuleFor(x => x.Name).Must(_ => true);
+    }
+
+    protected override bool PreValidate(PreValidateDto instance, ValidationResult result)
+    {
+        // Dangerous: returning false WITHOUT adding an error produces a silent pass.
+        if (instance.Name == null)
+            return false;
+        return true;
+    }
+}
+
 public class PreValidateTests
 {
     [Fact]
@@ -78,5 +94,22 @@ public class PreValidateTests
 
         Assert.False(result.IsValid);
         Assert.Equal(0, validator.RuleInvocations);
+    }
+
+    [Fact]
+    public void Validate_WhenPreValidateReturnsFalseWithoutAddingError_ProducesSilentPass()
+    {
+        // TRAP: If PreValidate returns false WITHOUT adding an error, Validate() returns
+        // an empty, valid result — even though rule evaluation was skipped. This is the
+        // most dangerous misuse of the hook and should be documented as a contract.
+        var validator = new SilentPassPreValidateValidator();
+
+        var result = validator.Validate(new PreValidateDto { Name = null });
+
+        // Despite returning false and skipping rules, the result is valid because
+        // no error was added. This is the silent-pass trap documented in PreValidate's
+        // XML doc warning.
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
     }
 }

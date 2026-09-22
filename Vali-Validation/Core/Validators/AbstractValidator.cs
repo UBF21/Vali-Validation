@@ -24,7 +24,13 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
     /// </summary>
     /// <param name="instance">The object about to be validated.</param>
     /// <param name="result">The result being built. Add errors here if returning <c>false</c>.</param>
-    /// <returns><c>true</c> (the default) to proceed with normal rule evaluation; <c>false</c> to skip it.</returns>
+    /// <returns>
+    /// <c>true</c> (the default) to proceed with normal rule evaluation; <c>false</c> to skip it.
+    /// <strong>WARNING:</strong> Returning <c>false</c> without adding at least one error to
+    /// <paramref name="result"/> produces a silent pass — <c>Validate()</c> will return an empty,
+    /// <c>IsValid == true</c> result even though rule evaluation was skipped. This is the most
+    /// dangerous misuse of this hook. Always add at least one error before returning <c>false</c>.
+    /// </returns>
     protected virtual bool PreValidate(T instance, ValidationResult result) => true;
 
     /// <inheritdoc/>
