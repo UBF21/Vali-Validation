@@ -25,6 +25,15 @@ public interface IRuleBuilder<T, TProperty> where T : class
     /// <summary>Sets an error code for the last defined rule.</summary>
     IRuleBuilder<T, TProperty> WithErrorCode(string code);
 
+    /// <summary>
+    /// Tags the rule(s) defined by this builder with the given rule set names, so they only run
+    /// when a <see cref="Validators.ValidationOptions.IncludeRuleSets"/> call includes one of these
+    /// names. Rules with no <c>InRuleSet</c> call carry the implicit tag <c>"default"</c>. Calling
+    /// this multiple times on the same builder is additive (adds more tags, doesn't replace).
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="ruleSetNames"/> is empty.</exception>
+    IRuleBuilder<T, TProperty> InRuleSet(params string[] ruleSetNames);
+
     // -------------------------------------------------------------------------
     // Built-in rules
     // -------------------------------------------------------------------------

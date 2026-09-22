@@ -21,6 +21,8 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     private Func<TProperty, bool>? _currentCondition;
     private bool _isRuleAdded;
     private bool _stopOnFirstFailure;
+    private readonly HashSet<string> _ruleSets = new() { "default" };
+    private bool _ruleSetsExplicit;
 
     // -------------------------------------------------------------------------
     // Constructors
@@ -51,9 +53,9 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     internal string EffectivePropertyName => _effectivePropertyName;
     internal Func<T, TProperty>? PropertyFunc => _propertyFunc;
 
-    internal void AddAsyncRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _validator.AddRule(rule);
+    internal void AddAsyncRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _validator.AddRule(rule, () => _ruleSets);
 
-    internal void AddSyncRule(Func<T, ValidationResult> rule) => _validator.AddRule(rule);
+    internal void AddSyncRule(Func<T, ValidationResult> rule) => _validator.AddRule(rule, () => _ruleSets);
 
     // -------------------------------------------------------------------------
     // Core registration
@@ -64,9 +66,9 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
         if (_isRuleAdded) return;
 
         if (_collectionFunc != null)
-            _validator.AddRule(RunCollectionRules);
+            _validator.AddRule(RunCollectionRules, () => _ruleSets);
         else
-            _validator.AddRule(RunSingleValueRules);
+            _validator.AddRule(RunSingleValueRules, () => _ruleSets);
 
         _isRuleAdded = true;
     }
@@ -194,6 +196,23 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     public IRuleBuilder<T, TProperty> StopOnFirstFailure()
     {
         _stopOnFirstFailure = true;
+        return this;
+    }
+
+    public IRuleBuilder<T, TProperty> InRuleSet(params string[] ruleSetNames)
+    {
+        if (ruleSetNames == null || ruleSetNames.Length == 0)
+            throw new ArgumentException("At least one rule set name must be provided.", nameof(ruleSetNames));
+
+        if (!_ruleSetsExplicit)
+        {
+            _ruleSets.Clear();
+            _ruleSetsExplicit = true;
+        }
+
+        foreach (var name in ruleSetNames)
+            _ruleSets.Add(name);
+
         return this;
     }
 

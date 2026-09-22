@@ -13,7 +13,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         string message = _currentMessage ?? $"The {_propertyName} field does not meet the specified condition.";
         _currentMessage = null;
 
-        _validator.AddRule(async (instance, _) =>
+        AddAsyncRule(async (instance, _) =>
         {
             var result = new ValidationResult();
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
@@ -32,7 +32,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         string message = _currentMessage ?? $"The {_propertyName} field does not meet the specified condition.";
         _currentMessage = null;
 
-        _validator.AddRule(async (instance, ct) =>
+        AddAsyncRule(async (instance, ct) =>
         {
             var result = new ValidationResult();
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
@@ -62,7 +62,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         string message = _currentMessage ?? $"The field {propertyName} does not meet the dependent condition of {dependentPropertyName}.";
         _currentMessage = null;
 
-        _validator.AddRule(async (instance, _) =>
+        AddAsyncRule(async (instance, _) =>
         {
             var result = new ValidationResult();
             TProperty value = propertyFunc(instance);

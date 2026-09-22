@@ -9,7 +9,7 @@ namespace Vali_Validation.Core.Validators;
 /// Base class for all validators. Subclass this and call <see cref="RuleFor"/> in the constructor
 /// to define validation rules.
 /// </summary>
-public abstract class AbstractValidator<T> : IValidator<T> where T : class
+public abstract partial class AbstractValidator<T> : IValidator<T> where T : class
 {
     private readonly List<Func<T, ValidationResult>> _syncRules = new();
     private readonly List<Func<T, CancellationToken, Task<ValidationResult>>> _asyncRules = new();
@@ -80,8 +80,17 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
         return new RuleBuilder<T, TElement>(this, filteredFunc, collectionName);
     }
 
-    internal void AddRule(Func<T, ValidationResult> rule) => _syncRules.Add(rule);
-    internal void AddRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _asyncRules.Add(rule);
+    internal void AddRule(Func<T, ValidationResult> rule, Func<IReadOnlySet<string>>? ruleSetsProvider = null)
+    {
+        _syncRules.Add(rule);
+        _syncRuleSets[rule] = ruleSetsProvider ?? (() => DefaultRuleSet);
+    }
+
+    internal void AddRule(Func<T, CancellationToken, Task<ValidationResult>> rule, Func<IReadOnlySet<string>>? ruleSetsProvider = null)
+    {
+        _asyncRules.Add(rule);
+        _asyncRuleSets[rule] = ruleSetsProvider ?? (() => DefaultRuleSet);
+    }
 
     internal IReadOnlyList<Func<T, ValidationResult>> SyncRules => _syncRules;
     internal IReadOnlyList<Func<T, CancellationToken, Task<ValidationResult>>> AsyncRules => _asyncRules;
@@ -98,8 +107,16 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
 
     protected void Include(AbstractValidator<T> other)
     {
-        foreach (var rule in other.SyncRules) _syncRules.Add(rule);
-        foreach (var rule in other.AsyncRules) _asyncRules.Add(rule);
+        foreach (var rule in other.SyncRules)
+        {
+            _syncRules.Add(rule);
+            _syncRuleSets[rule] = other._syncRuleSets.TryGetValue(rule, out var provider) ? provider : (() => DefaultRuleSet);
+        }
+        foreach (var rule in other.AsyncRules)
+        {
+            _asyncRules.Add(rule);
+            _asyncRuleSets[rule] = other._asyncRuleSets.TryGetValue(rule, out var provider) ? provider : (() => DefaultRuleSet);
+        }
     }
 
     /// <inheritdoc/>
