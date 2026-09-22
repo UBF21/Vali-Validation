@@ -157,16 +157,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
 
     public IRuleBuilder<T, TProperty> Latitude()
     {
-        _currentCondition = value =>
-        {
-            if (value == null) return false;
-            try
-            {
-                double d = Convert.ToDouble(value, CultureInfo.InvariantCulture);
-                return d >= -90.0 && d <= 90.0;
-            }
-            catch { return false; }
-        };
+        _currentCondition = value => NumericConversion.TryToDouble(value, out var d) && d >= -90.0 && d <= 90.0;
         _currentMessage = $"The {_propertyName} field must be a valid latitude (-90 to 90).";
         AddCurrentCondition();
         return this;
@@ -174,16 +165,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
 
     public IRuleBuilder<T, TProperty> Longitude()
     {
-        _currentCondition = value =>
-        {
-            if (value == null) return false;
-            try
-            {
-                double d = Convert.ToDouble(value, CultureInfo.InvariantCulture);
-                return d >= -180.0 && d <= 180.0;
-            }
-            catch { return false; }
-        };
+        _currentCondition = value => NumericConversion.TryToDouble(value, out var d) && d >= -180.0 && d <= 180.0;
         _currentMessage = $"The {_propertyName} field must be a valid longitude (-180 to 180).";
         AddCurrentCondition();
         return this;

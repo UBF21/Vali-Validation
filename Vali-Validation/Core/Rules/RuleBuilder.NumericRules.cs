@@ -6,12 +6,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
 {
     public IRuleBuilder<T, TProperty> Positive()
     {
-        _currentCondition = value =>
-        {
-            if (value == null) return false;
-            try { return Convert.ToDecimal(value, CultureInfo.InvariantCulture) > 0; }
-            catch { return false; }
-        };
+        _currentCondition = value => NumericConversion.TryToDecimal(value, out var d) && d > 0;
         _currentMessage = $"The {_propertyName} field must be a positive number.";
         AddCurrentCondition();
         return this;
@@ -19,12 +14,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
 
     public IRuleBuilder<T, TProperty> Negative()
     {
-        _currentCondition = value =>
-        {
-            if (value == null) return false;
-            try { return Convert.ToDecimal(value, CultureInfo.InvariantCulture) < 0; }
-            catch { return false; }
-        };
+        _currentCondition = value => NumericConversion.TryToDecimal(value, out var d) && d < 0;
         _currentMessage = $"The {_propertyName} field must be a negative number.";
         AddCurrentCondition();
         return this;
@@ -40,12 +30,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
 
     public IRuleBuilder<T, TProperty> NonNegative()
     {
-        _currentCondition = value =>
-        {
-            if (value == null) return false;
-            try { return Convert.ToDouble(value, System.Globalization.CultureInfo.InvariantCulture) >= 0; }
-            catch { return false; }
-        };
+        _currentCondition = value => NumericConversion.TryToDouble(value, out var d) && d >= 0;
         _currentMessage = $"The {_propertyName} field must be non-negative (zero or greater).";
         AddCurrentCondition();
         return this;
@@ -53,16 +38,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
 
     public IRuleBuilder<T, TProperty> Percentage()
     {
-        _currentCondition = value =>
-        {
-            if (value == null) return false;
-            try
-            {
-                double d = Convert.ToDouble(value, System.Globalization.CultureInfo.InvariantCulture);
-                return d >= 0 && d <= 100;
-            }
-            catch { return false; }
-        };
+        _currentCondition = value => NumericConversion.TryToDouble(value, out var d) && d >= 0 && d <= 100;
         _currentMessage = $"The {_propertyName} field must be a valid percentage between 0 and 100.";
         AddCurrentCondition();
         return this;
@@ -73,16 +49,14 @@ public partial class RuleBuilder<T, TProperty> where T : class
         _currentCondition = value =>
         {
             if (value == null) return true;
-            decimal d;
-            try { d = Convert.ToDecimal(value, CultureInfo.InvariantCulture); }
-            catch { return true; }
+            if (!NumericConversion.TryToDecimal(value, out decimal d)) return false;
+
             string str = d.ToString(CultureInfo.InvariantCulture);
             int dotIndex = str.IndexOf('.');
             string intPart = dotIndex < 0 ? str : str.Substring(0, dotIndex);
             string fracPart = dotIndex < 0 ? string.Empty : str.Substring(dotIndex + 1);
             if (fracPart.Length > decimalPlaces) return false;
-            if (intPart.TrimStart('-').Length + fracPart.Length > totalDigits) return false;
-            return true;
+            return intPart.TrimStart('-').Length + fracPart.Length <= totalDigits;
         };
         _currentMessage = $"The {_propertyName} field must have at most {totalDigits} total digits and {decimalPlaces} decimal places.";
         AddCurrentCondition();
@@ -91,16 +65,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
 
     public IRuleBuilder<T, TProperty> MultipleOf(decimal factor)
     {
-        _currentCondition = value =>
-        {
-            if (value == null) return false;
-            try
-            {
-                decimal d = Convert.ToDecimal(value);
-                return factor != 0 && d % factor == 0;
-            }
-            catch { return false; }
-        };
+        _currentCondition = value => NumericConversion.TryToDecimal(value, out var d) && factor != 0 && d % factor == 0;
         _currentMessage = $"The {_propertyName} field must be a multiple of {factor}.";
         AddCurrentCondition();
         return this;
@@ -115,25 +80,16 @@ public partial class RuleBuilder<T, TProperty> where T : class
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             TProperty other = otherFunc(instance);
-            if (value == null) return false;
-            try
-            {
-                decimal dv = Convert.ToDecimal(value, CultureInfo.InvariantCulture);
-                decimal dOther = Convert.ToDecimal(other, CultureInfo.InvariantCulture);
-                return dOther != 0 && dv % dOther == 0;
-            }
-            catch { return false; }
+            if (!NumericConversion.TryToDecimal(value, out decimal dv)) return false;
+            if (!NumericConversion.TryToDecimal(other, out decimal dOther)) return false;
+            return dOther != 0 && dv % dOther == 0;
         }, message);
         return this;
     }
 
     public IRuleBuilder<T, TProperty> Odd()
     {
-        _currentCondition = value =>
-        {
-            try { return Convert.ToInt64(value) % 2 != 0; }
-            catch { return false; }
-        };
+        _currentCondition = value => NumericConversion.TryToInt64(value, out var l) && l % 2 != 0;
         _currentMessage = $"The {_propertyName} field must be an odd number.";
         AddCurrentCondition();
         return this;
@@ -141,11 +97,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
 
     public IRuleBuilder<T, TProperty> Even()
     {
-        _currentCondition = value =>
-        {
-            try { return Convert.ToInt64(value) % 2 == 0; }
-            catch { return false; }
-        };
+        _currentCondition = value => NumericConversion.TryToInt64(value, out var l) && l % 2 == 0;
         _currentMessage = $"The {_propertyName} field must be an even number.";
         AddCurrentCondition();
         return this;

@@ -33,8 +33,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
         {
             string? str = value?.ToString();
             if (string.IsNullOrWhiteSpace(str)) return false;
-            try { Convert.FromBase64String(str); return true; }
-            catch { return false; }
+            var buffer = new byte[(str.Length / 4 + 1) * 3];
+            return Convert.TryFromBase64String(str, buffer, out _);
         };
         _currentMessage = $"The {_propertyName} field must be a valid Base64 encoded string.";
         AddCurrentCondition();
