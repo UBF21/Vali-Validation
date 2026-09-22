@@ -146,6 +146,7 @@ await validator.ValidateAndThrowAsync(dto, cancellationToken);
 |----------|-------------|
 | `WithMessage(msg)` | Override the error message; supports `{PropertyName}` and `{PropertyValue}` |
 | `WithErrorCode(code)` | Attach an error code to the rule |
+| `WithSeverity(severity)` | Mark the rule `Severity.Warning`/`Severity.Info` instead of the default `Severity.Error` |
 | `OverridePropertyName(name)` | Use a custom key in error dictionaries |
 | `StopOnFirstFailure()` | Stop evaluating rules for this property after first failure |
 | `When(condition)` | Only run preceding rules when condition is true |
@@ -162,6 +163,60 @@ RuleFor(x => x.Age)
     .GreaterThan(0)
     .WithMessage("'{PropertyName}' value '{PropertyValue}' must be positive.");
 ```
+
+## Severity (Warnings vs Errors)
+
+By default, every rule failure is `Severity.Error` and makes `IsValid` `false`. Mark a rule as
+non-blocking with `.WithSeverity(Severity.Warning)`:
+
+```csharp
+public class OrderValidator : AbstractValidator<Order>
+{
+    public OrderValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty(); // Severity.Error (default)
+
+        RuleFor(x => x.Discount)
+            .LessThanOrEqualTo(50)
+            .WithSeverity(Severity.Warning)
+            .WithMessage("Discount above 50% requires manager approval.");
+    }
+}
+```
+
+A `Warning` (or `Info`) failure still appears in `result.Failures`, but never makes `IsValid`
+`false` and never appears in the legacy `Errors`/`ErrorCodes`/`ErrorsFor`/`HasErrorFor` surface —
+those only ever reflect `Severity.Error` failures, so existing code that doesn't know about
+severity keeps working unchanged.
+
+`result.Failures` serializes (via `System.Text.Json`, default options — no naming policy or
+converter required) as a single structured array:
+
+```json
+{
+  "isValid": false,
+  "failures": [
+    { "property": "Email", "message": "The Email field must be a valid email address.", "severity": "Error" },
+    { "property": "Discount", "message": "Discount above 50% requires manager approval.", "severity": "Warning" }
+  ]
+}
+```
+
+**`.WithSeverity()` scope**: like `.WithMessage()`/`.WithErrorCode()`, it only affects the last
+rule in a standard property chain (`.NotEmpty()`, `.Must()`, etc.) — it has no effect on
+`RequiredIf`/`EqualToProperty`/other cross-property rules, which always produce `Severity.Error`.
+
+### Migrating from v2.x
+
+- If you never need `Warning`/`Info` severities, **no code changes are required** —
+  `Errors`/`ErrorCodes`/`ErrorsFor(...)`/`HasErrorFor(...)`/`FirstError(...)`/`IsValid` all behave
+  exactly as before.
+- To read the new severity-aware data:
+  ```csharp
+  // Old (v2.x): result.Errors["Email"]
+  // New (v3.x):
+  result.Failures.Where(f => f.PropertyName == "Email").Select(f => f.Message);
+  ```
 
 ## CascadeMode
 

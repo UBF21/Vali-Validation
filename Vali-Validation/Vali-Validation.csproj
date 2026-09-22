@@ -8,7 +8,7 @@
 
         <!-- Package identity -->
         <PackageId>Vali-Validation</PackageId>
-        <Version>2.0.0</Version>
+        <Version>3.0.0</Version>
         <Title>Vali-Validation</Title>
         <Product>Vali-Validation</Product>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
@@ -44,30 +44,39 @@
         </Description>
 
         <PackageReleaseNotes>
-            v2.0.0 — Major improvements and new features:
+            v3.0.0 — BREAKING CHANGE: Severity-aware validation results.
 
-            Bug fixes:
-            - ValidateAsync now exposed on IValidator&lt;T&gt; interface (was missing).
-            - Validate() no longer deadlocks in ASP.NET Core: sync and async rules run in separate lists.
-            - LessThan() had wrong error message ("greater than") — fixed.
-            - Positive() no longer accepts zero (semantics fix).
-            - Expression body crash fixed for non-MemberExpression selectors (e.g. x =&gt; x.Name.ToLower()).
-            - MustAsync no longer registers an empty sync delegate unnecessarily.
-            - isValidAlpha renamed to IsValidAlpha (naming convention fix).
+            ValidationResult now tracks failures with a severity (Error/Warning/Info) instead of
+            a flat pass/fail per property. The new ValidationResult.Failures (List&lt;ValidationFailure&gt;)
+            is the source of truth; Errors/ErrorCodes/ErrorsFor/HasErrorFor/FirstError/ToFlatList/
+            ErrorCount/PropertyNames all still work exactly as before, but now only reflect
+            Severity.Error failures — a rule marked .WithSeverity(Severity.Warning) never appears
+            in them and never makes IsValid false.
 
-            Design improvements:
-            - ValidationResult.Errors changed from Dictionary&lt;string, List&lt;string?&gt;&gt; to List&lt;string&gt; (errors are never null).
-            - Constants.cs removed (Zero/One literals added no value).
-            - AddValidationsFromAssembly now accepts optional ServiceLifetime parameter (default Transient).
-            - New ValidationException typed exception in Core/Exceptions/.
-            - ValidateAndThrow() and ValidateAndThrowAsync() added to AbstractValidator.
+            Migration:
+            - No code changes required if you only ever used the old Errors/ErrorCodes/ErrorsFor/
+              HasErrorFor/IsValid surface and never need Warning/Info severities — behavior is
+              identical for validators that never call .WithSeverity().
+            - To read the new severity-aware data: use result.Failures directly, or
+              result.Failures.Where(f =&gt; f.PropertyName == "Email").Select(f =&gt; f.Message)
+              instead of result.Errors["Email"].
+            - New fluent modifier: .WithSeverity(Severity.Warning) on any property rule (same
+              placement rules as WithMessage/WithErrorCode — only affects the last rule in the
+              chain, and only rules added via the standard property-rule chain, not RequiredIf/
+              EqualToProperty and other cross-property rules).
+            - ValidationResult now serializes (System.Text.Json, default options) as a single
+              structured array: { "isValid": bool, "failures": [{ "property", "message",
+              "severity", "errorCode"? }] } — see README for the full example.
 
             New features:
-            - When(Func&lt;T, bool&gt;) / Unless(Func&lt;T, bool&gt;) — conditional rule execution.
-            - StopOnFirstFailure() — stop evaluating rules for a property after first failure.
-            - SetValidator(AbstractValidator&lt;TProperty&gt;) — delegate validation to nested validators.
-            - RuleForEach(x =&gt; x.Collection) — validate each element with indexed error keys (Items[0]).
-            - OverridePropertyName(string) — control the error key in ValidationResult.Errors.
+            - Severity enum (Error/Warning/Info) in Vali_Validation.Core.Results.
+            - ValidationResult.Failures — single structured list, replaces the implicit
+              two-collection (Errors/ErrorCodes) model as the source of truth.
+            - ValidationResult.AddFailure(property, message, severity, errorCode) — general-purpose
+              failure-adding method; AddError is now a Severity.Error-only shorthand for it.
+            - IRuleBuilder&lt;T,TProperty&gt;.WithSeverity(Severity) — mark a rule as non-blocking.
+            - CustomValidationContext&lt;T&gt;.AddFailure(..., Severity, ...) overloads — Custom()
+              rules can now raise warnings too.
         </PackageReleaseNotes>
     </PropertyGroup>
 
