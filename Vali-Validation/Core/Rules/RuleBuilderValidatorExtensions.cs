@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Vali_Validation.Core.Results;
 using Vali_Validation.Core.Validators;
 
@@ -57,6 +58,37 @@ public static class RuleBuilderValidatorExtensions
         }
 
         return builder;
+    }
+
+    /// <summary>
+    /// Delegates validation of the current property to a nested validator resolved from
+    /// <paramref name="serviceProvider"/> via <see cref="IValidator{TProperty}"/>. Equivalent to
+    /// <see cref="SetValidator{T,TProperty}"/> but resolves the nested validator through
+    /// dependency injection instead of requiring an already-constructed instance — useful when
+    /// nested validators are registered via <c>AddValidationsFromAssembly</c> and the root
+    /// validator has access to an <see cref="IServiceProvider"/> (e.g. injected into its own
+    /// constructor — ASP.NET Core's built-in container resolves <see cref="IServiceProvider"/>
+    /// itself with no extra registration required).
+    /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="serviceProvider"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// No <see cref="IValidator{TProperty}"/> is registered in <paramref name="serviceProvider"/>, or
+    /// the registered implementation is not an <see cref="AbstractValidator{TProperty}"/>.
+    /// </exception>
+    public static IRuleBuilder<T, TProperty?> InjectValidator<T, TProperty>(
+        this IRuleBuilder<T, TProperty?> builder,
+        IServiceProvider serviceProvider)
+        where T : class
+        where TProperty : class
+    {
+        if (serviceProvider == null) throw new ArgumentNullException(nameof(serviceProvider));
+
+        var resolved = serviceProvider.GetRequiredService<IValidator<TProperty>>();
+        if (resolved is not AbstractValidator<TProperty> nestedValidator)
+            throw new InvalidOperationException(
+                $"The IValidator<{typeof(TProperty).Name}> registered in the service provider must be an AbstractValidator<{typeof(TProperty).Name}> to be used with InjectValidator.");
+
+        return builder.SetValidator(nestedValidator);
     }
 
     private static ValidationResult MergeNested(ValidationResult nestedResult, string prefix)
