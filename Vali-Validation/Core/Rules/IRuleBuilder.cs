@@ -30,8 +30,12 @@ public interface IRuleBuilder<T, TProperty> where T : class
     /// Rules default to <see cref="Vali_Validation.Core.Results.Severity.Error"/> when this is never
     /// called. Like <see cref="WithMessage"/>/<see cref="WithErrorCode"/>, this only affects rules
     /// added via the standard property-rule chain (e.g. <c>NotEmpty()</c>, <c>Must()</c>) — it has
-    /// no effect on cross-property rules like <c>RequiredIf</c>/<c>EqualToProperty</c>, which always
-    /// produce <see cref="Vali_Validation.Core.Results.Severity.Error"/> failures.
+    /// no effect on cross-property rules like <c>RequiredIf</c>/<c>EqualToProperty</c>, nor on
+    /// <c>MustAsync</c>/<c>DependentRuleAsync</c> (both always produce
+    /// <see cref="Vali_Validation.Core.Results.Severity.Error"/> failures regardless of any preceding
+    /// or following <c>WithSeverity</c> call — calling it after an async rule silently has no effect,
+    /// or silently reassigns severity to a different, earlier synchronous rule in the same chain if
+    /// one exists).
     /// </summary>
     IRuleBuilder<T, TProperty> WithSeverity(Vali_Validation.Core.Results.Severity severity);
 

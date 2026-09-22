@@ -157,6 +157,38 @@ public class SeverityTests
         public SeverityOrderValidator2()
             => RuleFor(x => x.Discount).LessThanOrEqualTo(50m).WithErrorCode("HIGH_DISCOUNT").WithSeverity(Severity.Warning);
     }
+
+    [Fact]
+    public async Task WithSeverity_HasNoEffectOnMustAsync_StaysErrorSeverityAndStillBlocksIsValid()
+    {
+        // Documented boundary: MustAsync bypasses the synchronous _rules chain entirely, so
+        // .WithSeverity() silently has no effect on it — the failure stays Severity.Error and
+        // still blocks IsValid, exactly like calling .WithSeverity() before any rule exists.
+        var validator = new AsyncSeverityBoundaryValidator();
+
+        var result = await validator.ValidateAsync(new AsyncSeverityDto { Email = "anything" });
+
+        Assert.False(result.IsValid);
+        var failure = Assert.Single(result.Failures);
+        Assert.Equal(Severity.Error, failure.Severity);
+    }
+
+    private class AsyncSeverityDto
+    {
+        public string? Email { get; set; }
+    }
+
+    private class AsyncSeverityBoundaryValidator : AbstractValidator<AsyncSeverityDto>
+    {
+        public AsyncSeverityBoundaryValidator()
+        {
+            RuleFor(x => x.Email).MustAsync(async _ =>
+            {
+                await Task.Yield();
+                return false;
+            }).WithSeverity(Severity.Warning);
+        }
+    }
 }
 
 public class NestedAddressDto

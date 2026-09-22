@@ -204,7 +204,10 @@ converter required) as a single structured array:
 
 **`.WithSeverity()` scope**: like `.WithMessage()`/`.WithErrorCode()`, it only affects the last
 rule in a standard property chain (`.NotEmpty()`, `.Must()`, etc.) — it has no effect on
-`RequiredIf`/`EqualToProperty`/other cross-property rules, which always produce `Severity.Error`.
+`RequiredIf`/`EqualToProperty`/other cross-property rules, nor on `MustAsync`/`DependentRuleAsync`
+(both always produce `Severity.Error` regardless of any preceding or following `.WithSeverity()`
+call — calling it after an async rule silently has no effect, or silently reassigns severity to a
+different, earlier synchronous rule in the same chain if one exists).
 
 ### Migrating from v2.x
 
