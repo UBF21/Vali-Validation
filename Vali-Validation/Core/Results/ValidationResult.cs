@@ -31,7 +31,7 @@ public class ValidationResult
     /// <see cref="ValidationResult"/> — use <see cref="AddFailure"/> to add failures instead.
     /// </summary>
     [JsonIgnore]
-    public Dictionary<string, List<string>> Errors
+    public IReadOnlyDictionary<string, List<string>> Errors
         => Failures.Where(f => f.Severity == Severity.Error)
             .GroupBy(f => f.PropertyName)
             .ToDictionary(g => g.Key, g => g.Select(f => f.Message).ToList());
@@ -41,7 +41,7 @@ public class ValidationResult
     /// failures that have a non-null error code. See <see cref="Errors"/> for the same caveats.
     /// </summary>
     [JsonIgnore]
-    public Dictionary<string, List<string>> ErrorCodes
+    public IReadOnlyDictionary<string, List<string>> ErrorCodes
         => Failures.Where(f => f.Severity == Severity.Error && f.ErrorCode != null)
             .GroupBy(f => f.PropertyName)
             .ToDictionary(g => g.Key, g => g.Select(f => f.ErrorCode!).ToList());
@@ -58,9 +58,7 @@ public class ValidationResult
         => Failures.FirstOrDefault(f => f.PropertyName == property && f.Severity == Severity.Error)?.Message;
 
     public List<string> ToFlatList()
-        => Failures.Where(f => f.Severity == Severity.Error)
-            .Select(f => $"{f.PropertyName}: {f.Message}")
-            .ToList();
+        => Errors.SelectMany(e => e.Value.Select(msg => $"{e.Key}: {msg}")).ToList();
 
     public int ErrorCount => Failures.Count(f => f.Severity == Severity.Error);
 

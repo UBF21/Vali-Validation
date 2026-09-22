@@ -225,6 +225,19 @@ public class ValidationResultTests
     }
 
     [Fact]
+    public void ToFlatList_GroupsByPropertyName_NotRawInsertionOrder()
+    {
+        var result = new ValidationResult();
+        result.AddError("A", "1");
+        result.AddError("B", "2");
+        result.AddError("A", "3");
+
+        var flat = result.ToFlatList();
+
+        Assert.Equal(new[] { "A: 1", "A: 3", "B: 2" }, flat);
+    }
+
+    [Fact]
     public void Merge_PreservesSeverityAndErrorCodeOfMergedFailures()
     {
         var target = new ValidationResult();
