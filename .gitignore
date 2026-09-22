@@ -11,3 +11,12 @@ packages/
 
 # Ignorar la carpeta .idea
 .idea/
+
+# CodeGraph
+.codegraph/
+
+# Config local del entorno de desarrollo, no se comparte con el repo
+.claude/
+.claudeignore
+.guardian.json
+CLAUDE.md

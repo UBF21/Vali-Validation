@@ -346,3 +346,48 @@ This project is licensed under the [Apache License 2.0](https://www.apache.org/l
 
 ## Contributions 🤝
 Feel free to open issues and submit pull requests to improve this library!
+
+## Estándares de Desarrollo
+
+> Última actualización: 2026-09-21.
+
+### Tamaño
+- Líneas por archivo: 300
+- Líneas por función: 30
+- Parámetros por función: 3
+- Longitud de línea: 120 caracteres
+
+### Complejidad
+- Ciclomática máxima: 10
+- Cognitiva máxima: 15
+- Anidamiento máximo: 3 niveles
+
+### C# / .NET
+- Nullable reference types: habilitado
+- Multi-target: net7.0 / net8.0 / net9.0 — todo cambio debe compilar en los tres
+
+### Tests
+- Cobertura mínima: 80%
+- Framework: xUnit
+- Tipos requeridos: Unit + Integration (AspNetCore.Tests)
+
+### Naming
+- Clases/tipos/interfaces: PascalCase
+- Métodos/variables/parámetros: camelCase
+- Archivos: PascalCase (nombre del tipo)
+- Constantes: PascalCase (convención .NET)
+
+### Arquitectura
+- Dependencias: paquetes de integración (AspNetCore/MediatR/ValiMediator) → core, nunca al revés
+- Core sin dependencias externas más allá de `Microsoft.Extensions.DependencyInjection.Abstractions`
+- Orden de imports: sistema → externas → internas
+
+### PRs / Commits
+- LOC máximas por PR: 400
+- Formato: Conventional Commits
+- Granularidad: un commit por unidad lógica de cambio
+
+### Seguridad
+- Secrets en código: Prohibido siempre
+- Validación de inputs: Obligatoria en boundary
+- Datos sensibles en logs: Prohibido siempre
