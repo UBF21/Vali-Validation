@@ -12,7 +12,7 @@ namespace Vali_Validation.Core.Validators;
 public abstract class AbstractValidator<T> : IValidator<T> where T : class
 {
     private readonly List<Func<T, ValidationResult>> _syncRules = new();
-    private readonly List<Func<T, Task<ValidationResult>>> _asyncRules = new();
+    private readonly List<Func<T, CancellationToken, Task<ValidationResult>>> _asyncRules = new();
 
     protected virtual CascadeMode GlobalCascadeMode => CascadeMode.Continue;
 
@@ -37,10 +37,10 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
     }
 
     internal void AddRule(Func<T, ValidationResult> rule) => _syncRules.Add(rule);
-    internal void AddRule(Func<T, Task<ValidationResult>> rule) => _asyncRules.Add(rule);
+    internal void AddRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _asyncRules.Add(rule);
 
     internal IReadOnlyList<Func<T, ValidationResult>> SyncRules => _syncRules;
-    internal IReadOnlyList<Func<T, Task<ValidationResult>>> AsyncRules => _asyncRules;
+    internal IReadOnlyList<Func<T, CancellationToken, Task<ValidationResult>>> AsyncRules => _asyncRules;
 
     /// <summary>
     /// Begins a switch/case validation block keyed on <paramref name="keyExpression"/>.
@@ -81,7 +81,7 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
         }
         foreach (var rule in _asyncRules)
         {
-            MergeErrors(result, await rule(instance).ConfigureAwait(false));
+            MergeErrors(result, await rule(instance, cancellationToken).ConfigureAwait(false));
             if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
         }
         return result;
@@ -110,7 +110,7 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
 
         if (_asyncRules.Count > 0)
         {
-            var tasks = _asyncRules.Select(rule => rule(instance));
+            var tasks = _asyncRules.Select(rule => rule(instance, cancellationToken));
             var results = await Task.WhenAll(tasks).ConfigureAwait(false);
             foreach (var partial in results)
                 MergeErrors(result, partial);

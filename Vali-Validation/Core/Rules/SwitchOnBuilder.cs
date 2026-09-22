@@ -11,11 +11,11 @@ internal sealed class SwitchOnBuilder<T, TProperty, TKey> : ISwitchOnBuilder<T, 
     private readonly string _propertyName;
     private readonly Func<T, TKey> _keyFunc;
 
-    private readonly List<(TKey Value, List<Func<T, ValidationResult>> SyncRules, List<Func<T, Task<ValidationResult>>> AsyncRules)> _cases
-        = new List<(TKey, List<Func<T, ValidationResult>>, List<Func<T, Task<ValidationResult>>>)>();
+    private readonly List<(TKey Value, List<Func<T, ValidationResult>> SyncRules, List<Func<T, CancellationToken, Task<ValidationResult>>> AsyncRules)> _cases
+        = new List<(TKey, List<Func<T, ValidationResult>>, List<Func<T, CancellationToken, Task<ValidationResult>>>)>();
 
     private List<Func<T, ValidationResult>>? _defaultSyncRules;
-    private List<Func<T, Task<ValidationResult>>>? _defaultAsyncRules;
+    private List<Func<T, CancellationToken, Task<ValidationResult>>>? _defaultAsyncRules;
 
     private bool _registered;
 
@@ -40,7 +40,7 @@ internal sealed class SwitchOnBuilder<T, TProperty, TKey> : ISwitchOnBuilder<T, 
         _cases.Add((
             value,
             new List<Func<T, ValidationResult>>(tempValidator.SyncRules),
-            new List<Func<T, Task<ValidationResult>>>(tempValidator.AsyncRules)
+            new List<Func<T, CancellationToken, Task<ValidationResult>>>(tempValidator.AsyncRules)
         ));
 
         EnsureRegistered();
@@ -54,7 +54,7 @@ internal sealed class SwitchOnBuilder<T, TProperty, TKey> : ISwitchOnBuilder<T, 
         configure(tempBuilder);
 
         _defaultSyncRules = new List<Func<T, ValidationResult>>(tempValidator.SyncRules);
-        _defaultAsyncRules = new List<Func<T, Task<ValidationResult>>>(tempValidator.AsyncRules);
+        _defaultAsyncRules = new List<Func<T, CancellationToken, Task<ValidationResult>>>(tempValidator.AsyncRules);
         EnsureRegistered();
         return this;
     }
@@ -84,7 +84,7 @@ internal sealed class SwitchOnBuilder<T, TProperty, TKey> : ISwitchOnBuilder<T, 
             return result;
         });
 
-        _parentValidator.AddRule(async instance =>
+        _parentValidator.AddRule(async (instance, ct) =>
         {
             var result = new ValidationResult();
             var key = _keyFunc(instance);
@@ -93,13 +93,13 @@ internal sealed class SwitchOnBuilder<T, TProperty, TKey> : ISwitchOnBuilder<T, 
             {
                 if (!Equals(key, entry.Value)) continue;
                 foreach (var rule in entry.AsyncRules)
-                    MergeInto(result, await rule(instance).ConfigureAwait(false));
+                    MergeInto(result, await rule(instance, ct).ConfigureAwait(false));
                 return result;
             }
 
             if (_defaultAsyncRules != null)
                 foreach (var rule in _defaultAsyncRules)
-                    MergeInto(result, await rule(instance).ConfigureAwait(false));
+                    MergeInto(result, await rule(instance, ct).ConfigureAwait(false));
 
             return result;
         });

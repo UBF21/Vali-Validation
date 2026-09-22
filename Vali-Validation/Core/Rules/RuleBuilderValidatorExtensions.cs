@@ -28,12 +28,12 @@ public static class RuleBuilderValidatorExtensions
 
         string prefix = rb.EffectivePropertyName;
 
-        rb.AddAsyncRule(async instance =>
+        rb.AddAsyncRule(async (instance, ct) =>
         {
             TProperty? value = rb.PropertyFunc?.Invoke(instance);
             if (value == null) return new ValidationResult();
 
-            var nestedResult = await nestedValidator.ValidateAsync(value).ConfigureAwait(false);
+            var nestedResult = await nestedValidator.ValidateAsync(value, ct).ConfigureAwait(false);
             var merged = new ValidationResult();
             foreach (var error in nestedResult.Errors)
                 foreach (var message in error.Value)

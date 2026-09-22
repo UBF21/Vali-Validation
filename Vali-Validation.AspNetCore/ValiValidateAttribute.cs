@@ -50,7 +50,7 @@ public sealed class ValiValidateAttribute : Attribute, IAsyncActionFilter
 
             if (validateMethod is null) continue;
 
-            var task = (Task)validateMethod.Invoke(validator, new object[] { argument, CancellationToken.None })!;
+            var task = (Task)validateMethod.Invoke(validator, new object[] { argument, context.HttpContext.RequestAborted })!;
             await task.ConfigureAwait(false);
 
             // Get the ValidationResult from the completed task

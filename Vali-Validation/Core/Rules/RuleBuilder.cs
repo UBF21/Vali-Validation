@@ -56,7 +56,7 @@ public class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> where T : cl
     internal string EffectivePropertyName => _effectivePropertyName;
     internal Func<T, TProperty>? PropertyFunc => _propertyFunc;
 
-    internal void AddAsyncRule(Func<T, Task<ValidationResult>> rule) => _validator.AddRule(rule);
+    internal void AddAsyncRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _validator.AddRule(rule);
 
     // -------------------------------------------------------------------------
     // Core registration
@@ -866,7 +866,7 @@ public class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> where T : cl
         string message = _currentMessage ?? $"The {_propertyName} field does not meet the specified condition.";
         _currentMessage = null;
 
-        _validator.AddRule(async instance =>
+        _validator.AddRule(async (instance, _) =>
         {
             var result = new ValidationResult();
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
@@ -885,11 +885,11 @@ public class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> where T : cl
         string message = _currentMessage ?? $"The {_propertyName} field does not meet the specified condition.";
         _currentMessage = null;
 
-        _validator.AddRule(async instance =>
+        _validator.AddRule(async (instance, ct) =>
         {
             var result = new ValidationResult();
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
-            bool isValid = await predicateAsync(value, CancellationToken.None).ConfigureAwait(false);
+            bool isValid = await predicateAsync(value, ct).ConfigureAwait(false);
             if (!isValid) result.AddError(_effectivePropertyName, message);
             return result;
         });
@@ -915,7 +915,7 @@ public class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> where T : cl
         string message = _currentMessage ?? $"The field {propertyName} does not meet the dependent condition of {dependentPropertyName}.";
         _currentMessage = null;
 
-        _validator.AddRule(async instance =>
+        _validator.AddRule(async (instance, _) =>
         {
             var result = new ValidationResult();
             TProperty value = propertyFunc(instance);

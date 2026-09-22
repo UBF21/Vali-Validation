@@ -8,11 +8,11 @@ internal sealed class SwitchCaseBuilder<T, TKey> : ICaseBuilder<T, TKey> where T
     private readonly AbstractValidator<T> _validator;
     private readonly Func<T, TKey> _keyFunc;
 
-    private readonly List<(TKey Value, List<Func<T, ValidationResult>> SyncRules, List<Func<T, Task<ValidationResult>>> AsyncRules)> _cases
-        = new List<(TKey, List<Func<T, ValidationResult>>, List<Func<T, Task<ValidationResult>>>)>();
+    private readonly List<(TKey Value, List<Func<T, ValidationResult>> SyncRules, List<Func<T, CancellationToken, Task<ValidationResult>>> AsyncRules)> _cases
+        = new List<(TKey, List<Func<T, ValidationResult>>, List<Func<T, CancellationToken, Task<ValidationResult>>>)>();
 
     private List<Func<T, ValidationResult>>? _defaultSyncRules;
-    private List<Func<T, Task<ValidationResult>>>? _defaultAsyncRules;
+    private List<Func<T, CancellationToken, Task<ValidationResult>>>? _defaultAsyncRules;
 
     private bool _registered;
 
@@ -30,7 +30,7 @@ internal sealed class SwitchCaseBuilder<T, TKey> : ICaseBuilder<T, TKey> where T
         _cases.Add((
             value,
             new List<Func<T, ValidationResult>>(sub.SyncRules),
-            new List<Func<T, Task<ValidationResult>>>(sub.AsyncRules)
+            new List<Func<T, CancellationToken, Task<ValidationResult>>>(sub.AsyncRules)
         ));
 
         EnsureRegistered();
@@ -42,7 +42,7 @@ internal sealed class SwitchCaseBuilder<T, TKey> : ICaseBuilder<T, TKey> where T
         var sub = new InlineSwitchValidator<T>();
         configure(sub);
         _defaultSyncRules = new List<Func<T, ValidationResult>>(sub.SyncRules);
-        _defaultAsyncRules = new List<Func<T, Task<ValidationResult>>>(sub.AsyncRules);
+        _defaultAsyncRules = new List<Func<T, CancellationToken, Task<ValidationResult>>>(sub.AsyncRules);
         EnsureRegistered();
         return this;
     }
@@ -74,7 +74,7 @@ internal sealed class SwitchCaseBuilder<T, TKey> : ICaseBuilder<T, TKey> where T
         });
 
         // Register one async delegate that evaluates the matching case
-        _validator.AddRule(async instance =>
+        _validator.AddRule(async (instance, ct) =>
         {
             var result = new ValidationResult();
             var key = _keyFunc(instance);
@@ -83,13 +83,13 @@ internal sealed class SwitchCaseBuilder<T, TKey> : ICaseBuilder<T, TKey> where T
             {
                 if (!Equals(key, entry.Value)) continue;
                 foreach (var rule in entry.AsyncRules)
-                    MergeInto(result, await rule(instance).ConfigureAwait(false));
+                    MergeInto(result, await rule(instance, ct).ConfigureAwait(false));
                 return result;
             }
 
             if (_defaultAsyncRules != null)
                 foreach (var rule in _defaultAsyncRules)
-                    MergeInto(result, await rule(instance).ConfigureAwait(false));
+                    MergeInto(result, await rule(instance, ct).ConfigureAwait(false));
 
             return result;
         });

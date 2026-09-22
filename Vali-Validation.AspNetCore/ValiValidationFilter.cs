@@ -33,7 +33,7 @@ public sealed class ValiValidationFilter<T> : IEndpointFilter where T : class
         if (argument is null)
             return await next(context);
 
-        var result = await validator.ValidateAsync(argument);
+        var result = await validator.ValidateAsync(argument, context.HttpContext.RequestAborted);
         if (result.IsValid)
             return await next(context);
 
