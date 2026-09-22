@@ -26,6 +26,15 @@ public class PersonWithAddressValidator : AbstractValidator<PersonDto>
     }
 }
 
+public class OptionalAddressValidator : AbstractValidator<PersonDto>
+{
+    public OptionalAddressValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty();
+        RuleFor(x => x.Address).SetValidator(new AddressValidator());
+    }
+}
+
 public class TagsValidator : AbstractValidator<PersonDto>
 {
     public TagsValidator()
@@ -148,6 +157,30 @@ public class AdvancedFeaturesTests
         var validator = new PersonWithAddressValidator();
         var person = new PersonDto { Name = "Alice", Address = null };
         var result = await validator.ValidateAsync(person);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task SetValidator_OnNullableNestedProperty_ValidatesWithoutCompilerWarning()
+    {
+        var validator = new OptionalAddressValidator();
+        var person = new PersonDto { Name = "Ana", Address = new AddressDto { Street = "", City = "" } };
+
+        var result = await validator.ValidateAsync(person);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, kvp => kvp.Key == "Address.Street");
+        Assert.Contains(result.Errors, kvp => kvp.Key == "Address.City");
+    }
+
+    [Fact]
+    public async Task SetValidator_OnNullableNestedProperty_WhenNull_SkipsNestedValidation()
+    {
+        var validator = new OptionalAddressValidator();
+        var person = new PersonDto { Name = "Ana", Address = null };
+
+        var result = await validator.ValidateAsync(person);
+
         Assert.True(result.IsValid);
     }
 

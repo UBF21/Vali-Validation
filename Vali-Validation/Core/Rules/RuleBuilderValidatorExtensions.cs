@@ -17,8 +17,8 @@ public static class RuleBuilderValidatorExtensions
     /// <typeparam name="TProperty">The nested object type (must be a class).</typeparam>
     /// <param name="builder">The rule builder for the nested property.</param>
     /// <param name="nestedValidator">Validator to apply to the nested object.</param>
-    public static IRuleBuilder<T, TProperty> SetValidator<T, TProperty>(
-        this IRuleBuilder<T, TProperty> builder,
+    public static IRuleBuilder<T, TProperty?> SetValidator<T, TProperty>(
+        this IRuleBuilder<T, TProperty?> builder,
         AbstractValidator<TProperty> nestedValidator)
         where T : class
         where TProperty : class
