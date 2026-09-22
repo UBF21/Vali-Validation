@@ -1,3 +1,4 @@
+using Vali_Validation.Core.Results;
 using Vali_Validation.Core.Validators;
 using Vali_Validation.Tests.Models;
 using Xunit;
@@ -45,23 +46,43 @@ public class WhenAsyncDeadlockTests
     {
         var previousContext = SynchronizationContext.Current;
         var queuingContext = new QueuingSynchronizationContext();
-        SynchronizationContext.SetSynchronizationContext(queuingContext);
         try
         {
             var validator = new WhenAsyncBlockingValidator();
-            var task = Task.Run(() => validator.Validate(new PersonDto { Name = "", Age = 1 }));
+            ValidationResult? result = null;
 
-            // Pump the captured context's queue while waiting — mirrors what a
-            // real UI/classic-ASP.NET message loop does. If WhenAsync's
-            // internal await captured this context, the Task above would
-            // never complete without this pump running concurrently; if it
-            // deadlocks despite the pump (old Task.Run-less implementation
-            // could still hang the thread that owns the context), the test
-            // times out instead of hanging the whole suite.
-            var completed = task.Wait(TimeSpan.FromSeconds(5));
+            // Validate() must run SYNCHRONOUSLY on a thread that has the
+            // QueuingSynchronizationContext set as its ambient context at the
+            // moment WhenAsync's condition awaits — that's what reproduces the
+            // classic single-threaded-context deadlock shape (UI thread /
+            // classic ASP.NET request thread). A dedicated Thread plays that
+            // role (Task.Run would run on a thread-pool thread, which never
+            // carries an ambient SynchronizationContext, defeating the repro).
+            // The main test thread only joins with a timeout — it must NOT
+            // pump the queue concurrently, since a live foreign-thread pump
+            // would drain the queue regardless of whether the fix is present,
+            // masking the very deadlock this test exists to catch.
+            var worker = new Thread(() =>
+            {
+                SynchronizationContext.SetSynchronizationContext(queuingContext);
+                result = validator.Validate(new PersonDto { Name = "", Age = 1 });
+            })
+            {
+                IsBackground = true
+            };
+            worker.Start();
+
+            var completed = worker.Join(TimeSpan.FromSeconds(5));
+
+            // Drain any queued continuation now so a pre-fix worker thread
+            // (stuck waiting on it) can unwind instead of leaking for the
+            // rest of the process's life. This runs only after `completed`
+            // has already been captured, so it cannot mask a real deadlock.
             queuingContext.RunQueued();
 
             Assert.True(completed, "Validate() did not complete within 5 seconds — likely deadlocked.");
+            Assert.False(result!.IsValid);
+            Assert.Contains(result.Errors, kvp => kvp.Key == "Name");
         }
         finally
         {
