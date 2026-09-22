@@ -16,6 +16,17 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
 
     protected virtual CascadeMode GlobalCascadeMode => CascadeMode.Continue;
 
+    /// <summary>
+    /// Runs before any rules are evaluated. Override to short-circuit validation entirely —
+    /// return <c>false</c> and add errors directly to <paramref name="result"/> to skip all
+    /// registered rules (useful for guard clauses like "instance must not be null" that would
+    /// otherwise require every rule to handle a bad instance defensively).
+    /// </summary>
+    /// <param name="instance">The object about to be validated.</param>
+    /// <param name="result">The result being built. Add errors here if returning <c>false</c>.</param>
+    /// <returns><c>true</c> (the default) to proceed with normal rule evaluation; <c>false</c> to skip it.</returns>
+    protected virtual bool PreValidate(T instance, ValidationResult result) => true;
+
     /// <inheritdoc/>
     /// <remarks>
     /// Calling <c>RuleFor</c> more than once for the same property is supported and additive —
@@ -72,6 +83,7 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
     public ValidationResult Validate(T instance)
     {
         var result = new ValidationResult();
+        if (!PreValidate(instance, result)) return result;
         foreach (var rule in _syncRules)
         {
             MergeErrors(result, rule(instance));
@@ -84,6 +96,7 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
     public async Task<ValidationResult> ValidateAsync(T instance, CancellationToken cancellationToken = default)
     {
         var result = new ValidationResult();
+        if (!PreValidate(instance, result)) return result;
         foreach (var rule in _syncRules)
         {
             MergeErrors(result, rule(instance));
@@ -115,6 +128,7 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
     public async Task<ValidationResult> ValidateParallelAsync(T instance, CancellationToken cancellationToken = default)
     {
         var result = new ValidationResult();
+        if (!PreValidate(instance, result)) return result;
         foreach (var rule in _syncRules)
             MergeErrors(result, rule(instance));
 
