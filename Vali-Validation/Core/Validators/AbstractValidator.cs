@@ -17,6 +17,11 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
     protected virtual CascadeMode GlobalCascadeMode => CascadeMode.Continue;
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Calling <c>RuleFor</c> more than once for the same property is supported and additive —
+    /// each call returns an independent rule builder, and both sets of rules run. Earlier calls
+    /// are never replaced or discarded.
+    /// </remarks>
     public IRuleBuilder<T, TProperty> RuleFor<TProperty>(Expression<Func<T, TProperty>> expression)
     {
         var propertyName = GetPropertyName(expression.Body);

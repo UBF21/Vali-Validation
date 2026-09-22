@@ -55,15 +55,17 @@ public class RuleBuilderWhenCombinationTests
     [Fact]
     public void Unless_CalledAgainForLaterRule_ComposesWithAndLikeWhen()
     {
-        var dto = new DiscountDto { Discount = 0, IsPromo = true, HasCap = false };
+        // IsPromo=false means GreaterThan(0).Unless(x => !x.IsPromo) guard = IsPromo = false -> should NOT run.
+        // Before the fix, the second .Unless(x => x.HasCap) overwrote GreaterThan's guard
+        // from (IsPromo) to (!HasCap = true), so it incorrectly ran and failed.
+        // After the fix, GreaterThan's guard becomes IsPromo && !HasCap = false && true = false,
+        // so it's correctly skipped.
+        var dto = new DiscountDto { Discount = 0, IsPromo = false, HasCap = false };
         var validatorInline = new InlineUnlessValidator();
 
         var result = validatorInline.Validate(dto);
 
-        // GreaterThan(0).Unless(x => !x.IsPromo) -> guard = IsPromo = true -> runs -> 0 > 0 fails.
-        // LessThan(1000).Unless(x => x.HasCap) -> guard = !HasCap = true -> runs -> 0 < 1000 passes.
-        Assert.False(result.IsValid);
-        Assert.Single(result.Errors["Discount"]);
+        Assert.True(result.IsValid);
     }
 
     private class InlineUnlessValidator : AbstractValidator<DiscountDto>

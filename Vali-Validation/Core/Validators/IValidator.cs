@@ -14,6 +14,11 @@ public interface IValidator<T> where T : class
     /// <summary>
     /// Begins the definition of validation rules for a specified property of the object.
     /// </summary>
+    /// <remarks>
+    /// Calling <c>RuleFor</c> more than once for the same property is supported and additive —
+    /// each call returns an independent rule builder, and both sets of rules run. Earlier calls
+    /// are never replaced or discarded.
+    /// </remarks>
     /// <typeparam name="TProperty">The type of the property to validate.</typeparam>
     /// <param name="expression">An expression that selects the property to validate (x => x.Name).</param>
     /// <returns>An <see cref="IRuleBuilder{T, TProperty}"/> to define fluent validation rules.</returns>
