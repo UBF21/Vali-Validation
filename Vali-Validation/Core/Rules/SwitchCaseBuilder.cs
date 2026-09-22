@@ -4,8 +4,8 @@ namespace Vali_Validation.Core.Rules;
 
 internal sealed class SwitchCaseBuilder<T, TKey> : SwitchRegistry<T, TKey>, ICaseBuilder<T, TKey> where T : class
 {
-    public SwitchCaseBuilder(AbstractValidator<T> validator, Func<T, TKey> keyFunc)
-        : base(validator, keyFunc)
+    public SwitchCaseBuilder(AbstractValidator<T> validator, Func<T, TKey> keyFunc, Func<T, bool>? ambientCondition = null)
+        : base(validator, keyFunc, ambientCondition)
     {
     }
 

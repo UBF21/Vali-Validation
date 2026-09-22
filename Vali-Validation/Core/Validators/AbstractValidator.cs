@@ -102,7 +102,7 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
     protected ICaseBuilder<T, TKey> RuleSwitch<TKey>(Expression<Func<T, TKey>> keyExpression)
     {
         var keyFunc = keyExpression.Compile();
-        return new SwitchCaseBuilder<T, TKey>(this, keyFunc);
+        return new SwitchCaseBuilder<T, TKey>(this, keyFunc, _ambientCondition);
     }
 
     protected void Include(AbstractValidator<T> other)

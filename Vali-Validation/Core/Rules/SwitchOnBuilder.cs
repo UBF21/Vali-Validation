@@ -12,8 +12,9 @@ internal sealed class SwitchOnBuilder<T, TProperty, TKey> : SwitchRegistry<T, TK
         AbstractValidator<T> parentValidator,
         Func<T, TProperty> propertyFunc,
         string propertyName,
-        Func<T, TKey> keyFunc)
-        : base(parentValidator, keyFunc)
+        Func<T, TKey> keyFunc,
+        Func<T, bool>? ambientCondition = null)
+        : base(parentValidator, keyFunc, ambientCondition)
     {
         _propertyFunc = propertyFunc;
         _propertyName = propertyName;

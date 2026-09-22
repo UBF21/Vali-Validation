@@ -14,6 +14,7 @@ internal abstract class SwitchRegistry<T, TKey> where T : class
 {
     private readonly AbstractValidator<T> _validator;
     private readonly Func<T, TKey> _keyFunc;
+    private readonly Func<T, bool>? _ambientCondition;
 
     private readonly List<(TKey Value, List<Func<T, ValidationResult>> SyncRules, List<Func<T, CancellationToken, Task<ValidationResult>>> AsyncRules)> _cases
         = new List<(TKey, List<Func<T, ValidationResult>>, List<Func<T, CancellationToken, Task<ValidationResult>>>)>();
@@ -24,10 +25,11 @@ internal abstract class SwitchRegistry<T, TKey> where T : class
     private bool _syncRegistered;
     private bool _asyncRegistered;
 
-    protected SwitchRegistry(AbstractValidator<T> validator, Func<T, TKey> keyFunc)
+    protected SwitchRegistry(AbstractValidator<T> validator, Func<T, TKey> keyFunc, Func<T, bool>? ambientCondition = null)
     {
         _validator = validator;
         _keyFunc = keyFunc;
+        _ambientCondition = ambientCondition;
     }
 
     protected void AddCase(TKey value, InlineSwitchValidator<T> configured)
@@ -53,14 +55,28 @@ internal abstract class SwitchRegistry<T, TKey> where T : class
     {
         if (_syncRegistered) return;
         _syncRegistered = true;
-        _validator.AddRule(RunSyncCase);
+        _validator.AddRule(WrapWithAmbientCondition(RunSyncCase));
     }
 
     private void EnsureAsyncRegistered()
     {
         if (_asyncRegistered) return;
         _asyncRegistered = true;
-        _validator.AddRule(RunAsyncCase);
+        _validator.AddRule(WrapWithAmbientCondition(RunAsyncCase));
+    }
+
+    private Func<T, ValidationResult> WrapWithAmbientCondition(Func<T, ValidationResult> rule)
+    {
+        if (_ambientCondition == null) return rule;
+        var condition = _ambientCondition;
+        return instance => condition(instance) ? rule(instance) : new ValidationResult();
+    }
+
+    private Func<T, CancellationToken, Task<ValidationResult>> WrapWithAmbientCondition(Func<T, CancellationToken, Task<ValidationResult>> rule)
+    {
+        if (_ambientCondition == null) return rule;
+        var condition = _ambientCondition;
+        return async (instance, ct) => condition(instance) ? await rule(instance, ct).ConfigureAwait(false) : new ValidationResult();
     }
 
     private ValidationResult RunSyncCase(T instance)

@@ -1,3 +1,4 @@
+using Vali_Validation.Core.Rules;
 using Vali_Validation.Core.Validators;
 using Xunit;
 
@@ -76,6 +77,70 @@ public class UnlessBlockConditionValidator : AbstractValidator<BlockConditionDto
                 RuleInvocations++;
                 return true;
             });
+        });
+    }
+}
+
+public class TransformBlockConditionValidator : AbstractValidator<BlockConditionDto>
+{
+    public int MustInvocations;
+
+    public TransformBlockConditionValidator()
+    {
+        When(x => x.IsPromo, () =>
+        {
+            ((RuleBuilder<BlockConditionDto, string?>)RuleFor(x => x.PromoCode)).Transform(s => s?.Trim()).Must(_ =>
+            {
+                MustInvocations++;
+                return true;
+            });
+        });
+    }
+}
+
+public class SwitchBlockConditionDto
+{
+    public bool IsPromo { get; set; }
+    public string? Method { get; set; }
+    public string? Value { get; set; }
+}
+
+public class RuleSwitchInWhenValidator : AbstractValidator<SwitchBlockConditionDto>
+{
+    public int CaseInvocations;
+
+    public RuleSwitchInWhenValidator()
+    {
+        When(x => x.IsPromo, () =>
+        {
+            RuleSwitch(x => x.Method)
+                .Case("a", rules =>
+                {
+                    rules.RuleFor(x => x.Value).Must(_ =>
+                    {
+                        CaseInvocations++;
+                        return true;
+                    });
+                });
+        });
+    }
+}
+
+public class SwitchOnInWhenValidator : AbstractValidator<SwitchBlockConditionDto>
+{
+    public int CaseInvocations;
+
+    public SwitchOnInWhenValidator()
+    {
+        When(x => x.IsPromo, () =>
+        {
+            RuleFor(x => x.Value)
+                .SwitchOn(x => x.Method)
+                .Case("a", b => b.Must(_ =>
+                {
+                    CaseInvocations++;
+                    return true;
+                }));
         });
     }
 }
@@ -160,5 +225,65 @@ public class BlockLevelConditionsTests
         {
             When(null!, () => { });
         }
+    }
+
+    [Fact]
+    public void When_WithTransform_SkipsMustWhenConditionFalse()
+    {
+        var validator = new TransformBlockConditionValidator();
+
+        validator.Validate(new BlockConditionDto { IsPromo = false });
+
+        Assert.Equal(0, validator.MustInvocations);
+    }
+
+    [Fact]
+    public void When_WithTransform_RunsMustWhenConditionTrue()
+    {
+        var validator = new TransformBlockConditionValidator();
+
+        validator.Validate(new BlockConditionDto { IsPromo = true });
+
+        Assert.Equal(1, validator.MustInvocations);
+    }
+
+    [Fact]
+    public void When_WithRuleSwitch_SkipsCaseWhenConditionFalse()
+    {
+        var validator = new RuleSwitchInWhenValidator();
+
+        validator.Validate(new SwitchBlockConditionDto { IsPromo = false, Method = "a" });
+
+        Assert.Equal(0, validator.CaseInvocations);
+    }
+
+    [Fact]
+    public void When_WithRuleSwitch_RunsCaseWhenConditionTrue()
+    {
+        var validator = new RuleSwitchInWhenValidator();
+
+        validator.Validate(new SwitchBlockConditionDto { IsPromo = true, Method = "a" });
+
+        Assert.Equal(1, validator.CaseInvocations);
+    }
+
+    [Fact]
+    public void When_WithSwitchOn_SkipsCaseWhenConditionFalse()
+    {
+        var validator = new SwitchOnInWhenValidator();
+
+        validator.Validate(new SwitchBlockConditionDto { IsPromo = false, Method = "a" });
+
+        Assert.Equal(0, validator.CaseInvocations);
+    }
+
+    [Fact]
+    public void When_WithSwitchOn_RunsCaseWhenConditionTrue()
+    {
+        var validator = new SwitchOnInWhenValidator();
+
+        validator.Validate(new SwitchBlockConditionDto { IsPromo = true, Method = "a" });
+
+        Assert.Equal(1, validator.CaseInvocations);
     }
 }

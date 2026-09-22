@@ -288,7 +288,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
         if (_propertyFunc == null)
             throw new InvalidOperationException("Transform is not supported in collection mode.");
         Func<T, TNew> newFunc = instance => transform(_propertyFunc(instance));
-        return new RuleBuilder<T, TNew>(_validator, newFunc, _propertyName);
+        return new RuleBuilder<T, TNew>(_validator, newFunc, _propertyName, _ambientCondition);
     }
 
     // -------------------------------------------------------------------------
@@ -298,6 +298,6 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     public ISwitchOnBuilder<T, TProperty, TKey> SwitchOn<TKey>(Expression<Func<T, TKey>> keyExpression)
     {
         var keyFunc = keyExpression.Compile();
-        return new SwitchOnBuilder<T, TProperty, TKey>(_validator, _propertyFunc!, _effectivePropertyName, keyFunc);
+        return new SwitchOnBuilder<T, TProperty, TKey>(_validator, _propertyFunc!, _effectivePropertyName, keyFunc, _ambientCondition);
     }
 }
