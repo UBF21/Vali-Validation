@@ -58,6 +58,28 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
         return new RuleBuilder<T, TElement>(this, collectionFunc, collectionName);
     }
 
+    /// <summary>
+    /// Begins a validation rule for each element of a collection property that satisfies
+    /// <paramref name="filter"/>. Elements that don't satisfy the filter are excluded from
+    /// validation entirely — they are never checked against the rules and never produce errors,
+    /// even if they would otherwise be invalid.
+    /// </summary>
+    /// <remarks>
+    /// Error keys are indexed by the FILTERED sequence position (e.g. <c>Items[0]</c> refers to
+    /// the first element that passed <paramref name="filter"/>, not its position in the original
+    /// collection).
+    /// </remarks>
+    public IRuleBuilder<T, TElement> RuleForEach<TElement>(
+        Expression<Func<T, IEnumerable<TElement>>> expression,
+        Func<TElement, bool> filter)
+    {
+        var collectionName = GetPropertyName(expression.Body);
+        var collectionFunc = expression.Compile();
+        Func<T, IEnumerable<TElement>> filteredFunc =
+            instance => collectionFunc(instance)?.Where(filter).ToList() ?? new List<TElement>();
+        return new RuleBuilder<T, TElement>(this, filteredFunc, collectionName);
+    }
+
     internal void AddRule(Func<T, ValidationResult> rule) => _syncRules.Add(rule);
     internal void AddRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _asyncRules.Add(rule);
 
