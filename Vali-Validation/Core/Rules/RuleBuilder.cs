@@ -53,6 +53,8 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     internal void AddAsyncRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _validator.AddRule(rule);
 
+    internal void AddSyncRule(Func<T, ValidationResult> rule) => _validator.AddRule(rule);
+
     // -------------------------------------------------------------------------
     // Core registration
     // -------------------------------------------------------------------------

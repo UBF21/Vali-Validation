@@ -64,6 +64,11 @@ public abstract class AbstractValidator<T> : IValidator<T> where T : class
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Nested validators attached via <c>SetValidator</c> whose own validator has any asynchronous
+    /// rules are only evaluated by <see cref="ValidateAsync"/>. If the nested validator is fully
+    /// synchronous, its errors ARE included in the result of this method.
+    /// </remarks>
     public ValidationResult Validate(T instance)
     {
         var result = new ValidationResult();
