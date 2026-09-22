@@ -6,8 +6,9 @@ namespace Vali_Validation.Core.Rules;
 /// <summary>
 /// Shared case/default registration and dispatch logic for <see cref="SwitchOnBuilder{T,TProperty,TKey}"/>
 /// and <see cref="SwitchCaseBuilder{T,TKey}"/>. Both builders collect per-case sync/async rule lists keyed
-/// by <typeparamref name="TKey"/>, register exactly one sync and one async delegate on the parent validator,
-/// and at evaluation time run the rules for the matching case (or the default case, if any).
+/// by <typeparamref name="TKey"/>, register a sync dispatch delegate always and an async dispatch delegate
+/// only if at least one case (or the default) registered an async rule, and at evaluation time run the
+/// rules for the matching case (or the default case, if any).
 /// </summary>
 internal abstract class SwitchRegistry<T, TKey> where T : class
 {
@@ -20,7 +21,8 @@ internal abstract class SwitchRegistry<T, TKey> where T : class
     private List<Func<T, ValidationResult>>? _defaultSyncRules;
     private List<Func<T, CancellationToken, Task<ValidationResult>>>? _defaultAsyncRules;
 
-    private bool _registered;
+    private bool _syncRegistered;
+    private bool _asyncRegistered;
 
     protected SwitchRegistry(AbstractValidator<T> validator, Func<T, TKey> keyFunc)
     {
@@ -35,22 +37,29 @@ internal abstract class SwitchRegistry<T, TKey> where T : class
             new List<Func<T, ValidationResult>>(configured.SyncRules),
             new List<Func<T, CancellationToken, Task<ValidationResult>>>(configured.AsyncRules)
         ));
-        EnsureRegistered();
+        EnsureSyncRegistered();
+        if (configured.AsyncRules.Count > 0) EnsureAsyncRegistered();
     }
 
     protected void SetDefault(InlineSwitchValidator<T> configured)
     {
         _defaultSyncRules = new List<Func<T, ValidationResult>>(configured.SyncRules);
         _defaultAsyncRules = new List<Func<T, CancellationToken, Task<ValidationResult>>>(configured.AsyncRules);
-        EnsureRegistered();
+        EnsureSyncRegistered();
+        if (configured.AsyncRules.Count > 0) EnsureAsyncRegistered();
     }
 
-    private void EnsureRegistered()
+    private void EnsureSyncRegistered()
     {
-        if (_registered) return;
-        _registered = true;
-
+        if (_syncRegistered) return;
+        _syncRegistered = true;
         _validator.AddRule(RunSyncCase);
+    }
+
+    private void EnsureAsyncRegistered()
+    {
+        if (_asyncRegistered) return;
+        _asyncRegistered = true;
         _validator.AddRule(RunAsyncCase);
     }
 
