@@ -930,10 +930,10 @@ public class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> where T : cl
     }
 
     public IRuleBuilder<T, TProperty> WhenAsync(Func<T, CancellationToken, Task<bool>> condition)
-        => When(instance => condition(instance, CancellationToken.None).GetAwaiter().GetResult());
+        => When(instance => Task.Run(() => condition(instance, CancellationToken.None)).GetAwaiter().GetResult());
 
     public IRuleBuilder<T, TProperty> UnlessAsync(Func<T, CancellationToken, Task<bool>> condition)
-        => Unless(instance => condition(instance, CancellationToken.None).GetAwaiter().GetResult());
+        => Unless(instance => Task.Run(() => condition(instance, CancellationToken.None)).GetAwaiter().GetResult());
 
     // -------------------------------------------------------------------------
     // Cross-property comparison rules

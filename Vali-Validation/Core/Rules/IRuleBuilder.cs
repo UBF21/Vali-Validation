@@ -122,7 +122,26 @@ public interface IRuleBuilder<T, TProperty> where T : class
         Expression<Func<T, TDependent>> dependentPropertyExpression,
         Func<TProperty, TDependent, Task<bool>> predicateAsync);
 
+    /// <summary>
+    /// Only executes the preceding rules when the async <paramref name="condition"/> evaluates to true.
+    /// </summary>
+    /// <remarks>
+    /// This blocks the calling thread until <paramref name="condition"/> completes (offloaded to the
+    /// thread pool to avoid deadlocking on a captured <see cref="SynchronizationContext"/>). Prefer
+    /// <see cref="MustAsync(Func{TProperty, CancellationToken, Task{bool}})"/> for rules that must not
+    /// block the calling thread.
+    /// </remarks>
     IRuleBuilder<T, TProperty> WhenAsync(Func<T, CancellationToken, Task<bool>> condition);
+
+    /// <summary>
+    /// Only executes the preceding rules when the async <paramref name="condition"/> evaluates to false.
+    /// </summary>
+    /// <remarks>
+    /// This blocks the calling thread until <paramref name="condition"/> completes (offloaded to the
+    /// thread pool to avoid deadlocking on a captured <see cref="SynchronizationContext"/>). Prefer
+    /// <see cref="MustAsync(Func{TProperty, CancellationToken, Task{bool}})"/> for rules that must not
+    /// block the calling thread.
+    /// </remarks>
     IRuleBuilder<T, TProperty> UnlessAsync(Func<T, CancellationToken, Task<bool>> condition);
 
     // -------------------------------------------------------------------------
