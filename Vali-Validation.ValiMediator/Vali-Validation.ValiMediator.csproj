@@ -67,7 +67,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Vali-Validation\Vali-Validation.csproj" />
-        <ProjectReference Include="..\..\Vali-Mediator\Vali-Mediator\Vali-Mediator.csproj" />
+        <PackageReference Include="Vali-Mediator" Version="2.0.1" />
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>
 
