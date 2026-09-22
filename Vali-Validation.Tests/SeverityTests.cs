@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Vali_Validation.Core.Results;
+using Vali_Validation.Core.Rules;
 using Vali_Validation.Core.Validators;
 using Xunit;
 
@@ -155,5 +156,78 @@ public class SeverityTests
     {
         public SeverityOrderValidator2()
             => RuleFor(x => x.Discount).LessThanOrEqualTo(50m).WithErrorCode("HIGH_DISCOUNT").WithSeverity(Severity.Warning);
+    }
+}
+
+public class NestedAddressDto
+{
+    public string? Street { get; set; }
+    public decimal ShippingWeight { get; set; }
+}
+
+public class NestedAddressValidator : AbstractValidator<NestedAddressDto>
+{
+    public NestedAddressValidator()
+    {
+        RuleFor(x => x.Street).NotEmpty();
+        RuleFor(x => x.ShippingWeight).LessThanOrEqualTo(20m).WithSeverity(Severity.Warning).WithErrorCode("HEAVY_PACKAGE");
+    }
+}
+
+public class NestedOrderDto
+{
+    public NestedAddressDto? Address { get; set; }
+}
+
+public class NestedOrderValidator : AbstractValidator<NestedOrderDto>
+{
+    public NestedOrderValidator()
+        => RuleFor(x => x.Address).SetValidator(new NestedAddressValidator());
+}
+
+public class SwitchSeverityDto
+{
+    public string Status { get; set; } = "";
+    public decimal Amount { get; set; }
+}
+
+public class SwitchSeverityValidator : AbstractValidator<SwitchSeverityDto>
+{
+    public SwitchSeverityValidator()
+    {
+        RuleSwitch(x => x.Status)
+            .Case("pending", v => v.RuleFor(x => x.Amount).LessThanOrEqualTo(1000m).WithSeverity(Severity.Warning).WithErrorCode("LARGE_PENDING_AMOUNT"));
+    }
+}
+
+public class NestedAndSwitchSeverityTests
+{
+    [Fact]
+    public void SetValidator_PreservesSeverityAndErrorCodeOfNestedWarnings()
+    {
+        var validator = new NestedOrderValidator();
+        var order = new NestedOrderDto { Address = new NestedAddressDto { Street = "Main St", ShippingWeight = 25 } };
+
+        var result = validator.Validate(order);
+
+        Assert.True(result.IsValid);
+        var failure = Assert.Single(result.Failures);
+        Assert.Equal("Address.ShippingWeight", failure.PropertyName);
+        Assert.Equal(Severity.Warning, failure.Severity);
+        Assert.Equal("HEAVY_PACKAGE", failure.ErrorCode);
+    }
+
+    [Fact]
+    public void RuleSwitch_PreservesSeverityAndErrorCodeOfCaseWarnings()
+    {
+        var validator = new SwitchSeverityValidator();
+        var dto = new SwitchSeverityDto { Status = "pending", Amount = 5000 };
+
+        var result = validator.Validate(dto);
+
+        Assert.True(result.IsValid);
+        var failure = Assert.Single(result.Failures);
+        Assert.Equal(Severity.Warning, failure.Severity);
+        Assert.Equal("LARGE_PENDING_AMOUNT", failure.ErrorCode);
     }
 }

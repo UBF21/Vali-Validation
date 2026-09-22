@@ -94,9 +94,8 @@ public static class RuleBuilderValidatorExtensions
     private static ValidationResult MergeNested(ValidationResult nestedResult, string prefix)
     {
         var merged = new ValidationResult();
-        foreach (var error in nestedResult.Errors)
-            foreach (var message in error.Value)
-                merged.AddError($"{prefix}.{error.Key}", message);
+        foreach (var failure in nestedResult.Failures)
+            merged.AddFailure($"{prefix}.{failure.PropertyName}", failure.Message, failure.Severity, failure.ErrorCode);
         return merged;
     }
 }

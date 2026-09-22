@@ -119,8 +119,7 @@ internal abstract class SwitchRegistry<T, TKey> where T : class
 
     private static void MergeInto(ValidationResult target, ValidationResult source)
     {
-        foreach (var kvp in source.Errors)
-            foreach (var msg in kvp.Value)
-                target.AddError(kvp.Key, msg);
+        foreach (var failure in source.Failures)
+            target.AddFailure(failure.PropertyName, failure.Message, failure.Severity, failure.ErrorCode);
     }
 }

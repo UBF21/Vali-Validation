@@ -131,7 +131,7 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
         if (!PreValidate(instance, result)) return result;
         foreach (var rule in _syncRules)
         {
-            MergeErrors(result, rule(instance));
+            result.Merge(rule(instance));
             if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) break;
         }
         return result;
@@ -144,12 +144,12 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
         if (!PreValidate(instance, result)) return result;
         foreach (var rule in _syncRules)
         {
-            MergeErrors(result, rule(instance));
+            result.Merge(rule(instance));
             if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
         }
         foreach (var rule in _asyncRules)
         {
-            MergeErrors(result, await rule(instance, cancellationToken).ConfigureAwait(false));
+            result.Merge(await rule(instance, cancellationToken).ConfigureAwait(false));
             if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
         }
         return result;
@@ -175,32 +175,17 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
         var result = new ValidationResult();
         if (!PreValidate(instance, result)) return result;
         foreach (var rule in _syncRules)
-            MergeErrors(result, rule(instance));
+            result.Merge(rule(instance));
 
         if (_asyncRules.Count > 0)
         {
             var tasks = _asyncRules.Select(rule => rule(instance, cancellationToken));
             var results = await Task.WhenAll(tasks).ConfigureAwait(false);
             foreach (var partial in results)
-                MergeErrors(result, partial);
+                result.Merge(partial);
         }
 
         return result;
-    }
-
-    private static void MergeErrors(ValidationResult target, ValidationResult source)
-    {
-        foreach (var error in source.Errors)
-            foreach (var message in error.Value)
-                target.AddError(error.Key, message);
-
-        foreach (var code in source.ErrorCodes)
-            foreach (var c in code.Value)
-            {
-                if (!target.ErrorCodes.ContainsKey(code.Key))
-                    target.ErrorCodes[code.Key] = new List<string>();
-                target.ErrorCodes[code.Key].Add(c);
-            }
     }
 
     internal static string GetPropertyName(Expression expression)
