@@ -26,6 +26,16 @@ public interface IRuleBuilder<T, TProperty> where T : class
     IRuleBuilder<T, TProperty> WithErrorCode(string code);
 
     /// <summary>
+    /// Sets the <see cref="Vali_Validation.Core.Results.Severity"/> for the last defined rule.
+    /// Rules default to <see cref="Vali_Validation.Core.Results.Severity.Error"/> when this is never
+    /// called. Like <see cref="WithMessage"/>/<see cref="WithErrorCode"/>, this only affects rules
+    /// added via the standard property-rule chain (e.g. <c>NotEmpty()</c>, <c>Must()</c>) — it has
+    /// no effect on cross-property rules like <c>RequiredIf</c>/<c>EqualToProperty</c>, which always
+    /// produce <see cref="Vali_Validation.Core.Results.Severity.Error"/> failures.
+    /// </summary>
+    IRuleBuilder<T, TProperty> WithSeverity(Vali_Validation.Core.Results.Severity severity);
+
+    /// <summary>
     /// Tags the rule(s) defined by this builder with the given rule set names, so they only run
     /// when a <see cref="Validators.ValidationOptions.IncludeRuleSets"/> call includes one of these
     /// names. Rules with no <c>InRuleSet</c> call carry the implicit tag <c>"default"</c>. Calling

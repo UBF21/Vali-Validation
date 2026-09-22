@@ -12,7 +12,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     private readonly Func<T, TProperty>? _propertyFunc;
     private readonly Func<T, IEnumerable<TProperty>>? _collectionFunc;
 
-    private readonly List<(Func<TProperty, bool> condition, string message, Func<T, bool>? when, string? code)> _rules = new();
+    private readonly List<(Func<TProperty, bool> condition, string message, Func<T, bool>? when, string? code, Severity severity)> _rules = new();
     private readonly List<(Func<T, bool> instanceCondition, string message, Func<T, bool>? when)> _instanceRules = new();
     private readonly string _propertyName;
 
@@ -109,7 +109,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     private void ApplyElementRules(T instance, TProperty element, string key, ValidationResult result)
     {
-        foreach (var (condition, message, when, code) in _rules)
+        foreach (var (condition, message, when, code, severity) in _rules)
         {
             if (when != null && !when(instance)) continue;
             if (element == null || condition(element)) continue;
@@ -117,7 +117,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
             string resolved = message
                 .Replace("{PropertyName}", key)
                 .Replace("{PropertyValue}", element?.ToString() ?? "null");
-            result.AddError(key, resolved, code);
+            result.AddFailure(key, resolved, severity, code);
             if (_stopOnFirstFailure) break;
         }
     }
@@ -134,7 +134,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     private void ApplyPropertyRules(T instance, TProperty value, ValidationResult result)
     {
-        foreach (var (condition, message, when, code) in _rules)
+        foreach (var (condition, message, when, code, severity) in _rules)
         {
             if (when != null && !when(instance)) continue;
             if (condition(value)) continue;
@@ -142,7 +142,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
             string resolved = message
                 .Replace("{PropertyName}", _effectivePropertyName)
                 .Replace("{PropertyValue}", value?.ToString() ?? "null");
-            result.AddError(_effectivePropertyName, resolved, code);
+            result.AddFailure(_effectivePropertyName, resolved, severity, code);
             if (_stopOnFirstFailure) break;
         }
     }
@@ -154,7 +154,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
             if (when != null && !when(instance)) continue;
             if (instanceCondition(instance)) continue;
 
-            result.AddError(_effectivePropertyName, message);
+            result.AddFailure(_effectivePropertyName, message, Severity.Error);
             if (_stopOnFirstFailure) break;
         }
     }
@@ -164,7 +164,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
         if (_currentCondition != null)
         {
             string message = _currentMessage ?? $"The {_effectivePropertyName} field is invalid.";
-            _rules.Add((_currentCondition, message, _ambientCondition, null));
+            _rules.Add((_currentCondition, message, _ambientCondition, null, Severity.Error));
             _currentCondition = null;
             _currentMessage = null;
         }
@@ -187,8 +187,8 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
         if (_rules.Count > 0)
         {
             int last = _rules.Count - 1;
-            var (condition, _, when, code) = _rules[last];
-            _rules[last] = (condition, message ?? $"The {_effectivePropertyName} field is invalid.", when, code);
+            var (condition, _, when, code, severity) = _rules[last];
+            _rules[last] = (condition, message ?? $"The {_effectivePropertyName} field is invalid.", when, code, severity);
         }
         return this;
     }
@@ -198,8 +198,19 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
         if (_rules.Count > 0)
         {
             int last = _rules.Count - 1;
-            var (cond, msg, when, _) = _rules[last];
-            _rules[last] = (cond, msg, when, code);
+            var (cond, msg, when, _, severity) = _rules[last];
+            _rules[last] = (cond, msg, when, code, severity);
+        }
+        return this;
+    }
+
+    public IRuleBuilder<T, TProperty> WithSeverity(Severity severity)
+    {
+        if (_rules.Count > 0)
+        {
+            int last = _rules.Count - 1;
+            var (cond, msg, when, code, _) = _rules[last];
+            _rules[last] = (cond, msg, when, code, severity);
         }
         return this;
     }
@@ -243,8 +254,8 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     {
         for (int i = 0; i < _rules.Count; i++)
         {
-            var (cond, msg, existingWhen, code) = _rules[i];
-            _rules[i] = (cond, msg, CombineWhen(existingWhen, condition), code);
+            var (cond, msg, existingWhen, code, severity) = _rules[i];
+            _rules[i] = (cond, msg, CombineWhen(existingWhen, condition), code, severity);
         }
         for (int i = 0; i < _instanceRules.Count; i++)
         {
