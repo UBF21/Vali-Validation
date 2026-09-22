@@ -13,6 +13,14 @@ public static class RuleBuilderValidatorExtensions
     /// Delegates validation of the current property to a nested validator.
     /// Errors are prefixed with the property name, e.g. <c>Address.Street</c>.
     /// </summary>
+    /// <remarks>
+    /// If <paramref name="nestedValidator"/> has no asynchronous rules, the nested validation runs
+    /// synchronously and its errors are visible to both <see cref="AbstractValidator{T}.Validate"/> and
+    /// <see cref="AbstractValidator{T}.ValidateAsync"/>. If <paramref name="nestedValidator"/> has any
+    /// asynchronous rules, the nested validation can only run via <see cref="AbstractValidator{T}.ValidateAsync"/> —
+    /// <see cref="AbstractValidator{T}.Validate"/> will not evaluate it, consistent with <c>Validate()</c>
+    /// only ever executing synchronous rules.
+    /// </remarks>
     /// <typeparam name="T">The root object type.</typeparam>
     /// <typeparam name="TProperty">The nested object type (must be a class).</typeparam>
     /// <param name="builder">The rule builder for the nested property.</param>
@@ -28,19 +36,35 @@ public static class RuleBuilderValidatorExtensions
 
         string prefix = rb.EffectivePropertyName;
 
-        rb.AddAsyncRule(async (instance, ct) =>
+        if (nestedValidator.AsyncRules.Count == 0)
         {
-            TProperty? value = rb.PropertyFunc?.Invoke(instance);
-            if (value == null) return new ValidationResult();
+            rb.AddSyncRule(instance =>
+            {
+                TProperty? value = rb.PropertyFunc?.Invoke(instance);
+                return value == null ? new ValidationResult() : MergeNested(nestedValidator.Validate(value), prefix);
+            });
+        }
+        else
+        {
+            rb.AddAsyncRule(async (instance, ct) =>
+            {
+                TProperty? value = rb.PropertyFunc?.Invoke(instance);
+                if (value == null) return new ValidationResult();
 
-            var nestedResult = await nestedValidator.ValidateAsync(value, ct).ConfigureAwait(false);
-            var merged = new ValidationResult();
-            foreach (var error in nestedResult.Errors)
-                foreach (var message in error.Value)
-                    merged.AddError($"{prefix}.{error.Key}", message);
-            return merged;
-        });
+                var nestedResult = await nestedValidator.ValidateAsync(value, ct).ConfigureAwait(false);
+                return MergeNested(nestedResult, prefix);
+            });
+        }
 
         return builder;
+    }
+
+    private static ValidationResult MergeNested(ValidationResult nestedResult, string prefix)
+    {
+        var merged = new ValidationResult();
+        foreach (var error in nestedResult.Errors)
+            foreach (var message in error.Value)
+                merged.AddError($"{prefix}.{error.Key}", message);
+        return merged;
     }
 }

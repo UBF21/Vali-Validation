@@ -22,6 +22,11 @@ public interface IValidator<T> where T : class
     /// <summary>
     /// Executes all synchronous validation rules against the given instance.
     /// </summary>
+    /// <remarks>
+    /// Nested validators attached via <c>SetValidator</c> whose own validator has any asynchronous
+    /// rules are only evaluated by <see cref="ValidateAsync"/>. If the nested validator is fully
+    /// synchronous, its errors ARE included in the result of this method.
+    /// </remarks>
     /// <param name="instance">The object to validate.</param>
     /// <returns>A <see cref="ValidationResult"/> containing any validation errors.</returns>
     ValidationResult Validate(T instance);

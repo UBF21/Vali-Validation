@@ -26,6 +26,23 @@ public class PersonWithAddressValidator : AbstractValidator<PersonDto>
     }
 }
 
+public class AddressValidatorWithAsyncRule : AbstractValidator<AddressDto>
+{
+    public AddressValidatorWithAsyncRule()
+    {
+        RuleFor(x => x.Street).MustAsync(street => Task.FromResult(!string.IsNullOrWhiteSpace(street)));
+    }
+}
+
+public class PersonWithAsyncAddressValidator : AbstractValidator<PersonDto>
+{
+    public PersonWithAsyncAddressValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty();
+        RuleFor(x => x.Address).SetValidator(new AddressValidatorWithAsyncRule());
+    }
+}
+
 public class OptionalAddressValidator : AbstractValidator<PersonDto>
 {
     public OptionalAddressValidator()
@@ -93,6 +110,42 @@ public class AsyncThrowingValidator : AbstractValidator<PersonDto>
 
 public class AdvancedFeaturesTests
 {
+    [Fact]
+    public void Validate_WithSetValidatorOnFullySyncNestedValidator_ReportsNestedErrors()
+    {
+        var validator = new PersonWithAddressValidator();
+        var person = new PersonDto { Name = "Ana", Address = new AddressDto { Street = "", City = "" } };
+
+        var result = validator.Validate(person);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, kvp => kvp.Key == "Address.Street");
+        Assert.Contains(result.Errors, kvp => kvp.Key == "Address.City");
+    }
+
+    [Fact]
+    public void Validate_WithSetValidatorOnFullySyncNestedValidator_WhenNull_Passes()
+    {
+        var validator = new PersonWithAddressValidator();
+        var person = new PersonDto { Name = "Ana", Address = null };
+
+        var result = validator.Validate(person);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WithSetValidatorOnAsyncNestedValidator_ReportsNestedErrors()
+    {
+        var validator = new PersonWithAsyncAddressValidator();
+        var person = new PersonDto { Name = "Ana", Address = new AddressDto { Street = "", City = "X" } };
+
+        var result = await validator.ValidateAsync(person);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, kvp => kvp.Key == "Address.Street");
+    }
+
     [Fact]
     public void RuleForEach_WhenAllElementsValid_Passes()
     {
