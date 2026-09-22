@@ -23,27 +23,30 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     private bool _stopOnFirstFailure;
     private readonly HashSet<string> _ruleSets = new() { "default" };
     private bool _ruleSetsExplicit;
+    private readonly Func<T, bool>? _ambientCondition;
 
     // -------------------------------------------------------------------------
     // Constructors
     // -------------------------------------------------------------------------
 
     // Single-value mode
-    public RuleBuilder(AbstractValidator<T> validator, Func<T, TProperty> propertyFunc, string propertyName)
+    public RuleBuilder(AbstractValidator<T> validator, Func<T, TProperty> propertyFunc, string propertyName, Func<T, bool>? ambientCondition = null)
     {
         _validator = validator;
         _propertyFunc = propertyFunc;
         _propertyName = propertyName;
         _effectivePropertyName = propertyName;
+        _ambientCondition = ambientCondition;
     }
 
     // Collection mode (used by AbstractValidator.RuleForEach)
-    internal RuleBuilder(AbstractValidator<T> validator, Func<T, IEnumerable<TProperty>> collectionFunc, string propertyName)
+    internal RuleBuilder(AbstractValidator<T> validator, Func<T, IEnumerable<TProperty>> collectionFunc, string propertyName, Func<T, bool>? ambientCondition = null)
     {
         _validator = validator;
         _collectionFunc = collectionFunc;
         _propertyName = propertyName;
         _effectivePropertyName = propertyName;
+        _ambientCondition = ambientCondition;
     }
 
     // -------------------------------------------------------------------------
@@ -53,9 +56,23 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     internal string EffectivePropertyName => _effectivePropertyName;
     internal Func<T, TProperty>? PropertyFunc => _propertyFunc;
 
-    internal void AddAsyncRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _validator.AddRule(rule, () => _ruleSets);
+    internal void AddAsyncRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _validator.AddRule(WrapWithAmbientCondition(rule), () => _ruleSets);
 
-    internal void AddSyncRule(Func<T, ValidationResult> rule) => _validator.AddRule(rule, () => _ruleSets);
+    internal void AddSyncRule(Func<T, ValidationResult> rule) => _validator.AddRule(WrapWithAmbientCondition(rule), () => _ruleSets);
+
+    private Func<T, ValidationResult> WrapWithAmbientCondition(Func<T, ValidationResult> rule)
+    {
+        if (_ambientCondition == null) return rule;
+        var condition = _ambientCondition;
+        return instance => condition(instance) ? rule(instance) : new ValidationResult();
+    }
+
+    private Func<T, CancellationToken, Task<ValidationResult>> WrapWithAmbientCondition(Func<T, CancellationToken, Task<ValidationResult>> rule)
+    {
+        if (_ambientCondition == null) return rule;
+        var condition = _ambientCondition;
+        return async (instance, ct) => condition(instance) ? await rule(instance, ct).ConfigureAwait(false) : new ValidationResult();
+    }
 
     // -------------------------------------------------------------------------
     // Core registration
@@ -147,7 +164,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
         if (_currentCondition != null)
         {
             string message = _currentMessage ?? $"The {_effectivePropertyName} field is invalid.";
-            _rules.Add((_currentCondition, message, null, null));
+            _rules.Add((_currentCondition, message, _ambientCondition, null));
             _currentCondition = null;
             _currentMessage = null;
         }
@@ -157,7 +174,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     private void AddInstanceCondition(Func<T, bool> condition, string message)
     {
-        _instanceRules.Add((condition, message, null));
+        _instanceRules.Add((condition, message, _ambientCondition));
         EnsureRegistered();
     }
 

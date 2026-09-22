@@ -43,7 +43,7 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
     {
         var propertyName = GetPropertyName(expression.Body);
         var propertyFunc = expression.Compile();
-        return new RuleBuilder<T, TProperty>(this, propertyFunc, propertyName);
+        return new RuleBuilder<T, TProperty>(this, propertyFunc, propertyName, _ambientCondition);
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
     {
         var collectionName = GetPropertyName(expression.Body);
         var collectionFunc = expression.Compile();
-        return new RuleBuilder<T, TElement>(this, collectionFunc, collectionName);
+        return new RuleBuilder<T, TElement>(this, collectionFunc, collectionName, _ambientCondition);
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
         var collectionFunc = expression.Compile();
         Func<T, IEnumerable<TElement>> filteredFunc =
             instance => collectionFunc(instance)?.Where(filter).ToList() ?? new List<TElement>();
-        return new RuleBuilder<T, TElement>(this, filteredFunc, collectionName);
+        return new RuleBuilder<T, TElement>(this, filteredFunc, collectionName, _ambientCondition);
     }
 
     internal void AddRule(Func<T, ValidationResult> rule, Func<IReadOnlySet<string>>? ruleSetsProvider = null)
