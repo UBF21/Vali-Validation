@@ -128,6 +128,36 @@ public class UserService
 | `Must(predicate)`                          | Custom boolean predicate rule.                                                        |
 | `WithMessage(msg)`                         | Override the default error message of the most recently added rule.                   |
 
+## Cascade Mode (Stop-on-First-Failure)
+
+Vali-Validation supports FluentValidation-equivalent cascade control at two levels:
+
+**Rule level** — stop evaluating further rules on ONE property after its first failure:
+
+```csharp
+RuleFor(x => x.Email)
+    .NotEmpty()
+    .Email()
+    .StopOnFirstFailure();
+```
+
+**Class level** — stop evaluating rules on OTHER properties once any rule anywhere fails, by overriding `GlobalCascadeMode` in your validator:
+
+```csharp
+public class UserValidator : AbstractValidator<User>
+{
+    protected override CascadeMode GlobalCascadeMode => CascadeMode.StopOnFirstFailure;
+
+    public UserValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty();
+        RuleFor(x => x.Email).NotEmpty().Email();
+    }
+}
+```
+
+`GlobalCascadeMode` defaults to `CascadeMode.Continue` (validate everything, collect all errors) — the common case for surfacing every problem to the user at once. Note `ValidateParallelAsync()` always runs every rule regardless of `GlobalCascadeMode`, since early-stop and parallel execution are mutually exclusive by design.
+
 ## Error Handling & Result Format
 
 ### Iterating Errors
