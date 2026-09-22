@@ -250,7 +250,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     public IRuleBuilder<T, TProperty> Custom(Action<TProperty, CustomValidationContext<T>> action)
     {
         if (action == null) throw new ArgumentNullException(nameof(action));
-        _validator.AddRule(instance =>
+        AddSyncRule(instance =>
         {
             var result = new ValidationResult();
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;

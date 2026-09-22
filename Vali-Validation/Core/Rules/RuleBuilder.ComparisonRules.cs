@@ -127,7 +127,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
         string message = $"The {_propertyName} field must equal {otherName}.";
-        _validator.AddRule(instance =>
+        AddSyncRule(instance =>
         {
             var result = new ValidationResult();
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
