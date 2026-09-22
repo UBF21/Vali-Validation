@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
+        <RootNamespace>Vali_Validation.TestHelpers</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <!-- Package identity -->
+        <PackageId>Vali-Validation.TestHelpers</PackageId>
+        <Version>1.0.0</Version>
+        <Title>Vali-Validation.TestHelpers</Title>
+        <Product>Vali-Validation.TestHelpers</Product>
+        <Authors>Felipe Rafael Montenegro Morriberon</Authors>
+        <Copyright>Copyright © 2026 - FM. All rights reserved.</Copyright>
+
+        <!-- Repository -->
+        <RepositoryUrl>https://github.com/UBF21/Vali-Validation</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://vali-validation-docs.netlify.app/</PackageProjectUrl>
+
+        <!-- License -->
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+
+        <!-- Discoverability -->
+        <PackageTags>validation;testing;xunit;nunit;mstest;assertions;vali</PackageTags>
+
+        <!-- Source Link / Symbols -->
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <DebugType>embedded</DebugType>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <Description>
+            Test-assertion helpers for Vali-Validation. Adds fluent ShouldHaveValidationErrorFor /
+            ShouldNotHaveValidationErrorFor extensions on ValidationResult. Framework-agnostic —
+            throws ValidationAssertionException on failure, which any test runner (xUnit, NUnit,
+            MSTest) fails the test on as an unhandled exception, without requiring a dependency
+            on that runner from this package.
+        </Description>
+
+        <PackageReleaseNotes>
+            v1.0.0 — Initial release:
+            - ShouldHaveValidationErrorFor(string propertyName)
+            - ShouldHaveValidationErrorFor(string propertyName, string expectedMessage)
+            - ShouldNotHaveValidationErrorFor(string propertyName)
+        </PackageReleaseNotes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Vali-Validation\Vali-Validation.csproj" />
+    </ItemGroup>
+
+</Project>
