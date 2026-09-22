@@ -99,4 +99,20 @@ public class NumericConversionTests
         var result = new NumConvBase64Validator().Validate(new NumConvDto { Text = text });
         Assert.Equal(expectedValid, result.IsValid);
     }
+
+    [Fact]
+    public void Positive_OnDoubleAtDecimalMaxBoundary_FailsWithoutThrowing()
+    {
+        // Regression test: (double)decimal.MaxValue rounds UP from the true decimal.MaxValue,
+        // so a double exactly at that boundary cannot actually be cast to decimal without
+        // overflowing. The guard must reject it (return false), not throw.
+        object boundary = (double)decimal.MaxValue;
+
+        var exception = Record.Exception(() =>
+            new NumConvPositiveValidator().Validate(new NumConvDto { Value = boundary }));
+        Assert.Null(exception);
+
+        var result = new NumConvPositiveValidator().Validate(new NumConvDto { Value = boundary });
+        Assert.False(result.IsValid);
+    }
 }

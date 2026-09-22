@@ -24,9 +24,9 @@ internal static class NumericConversion
             case uint ui: result = ui; return true;
             case ulong ul: result = ul; return true;
             case ushort us: result = us; return true;
-            case double d when !double.IsNaN(d) && !double.IsInfinity(d) && Math.Abs(d) <= DecimalFromDoubleMax:
+            case double d when !double.IsNaN(d) && !double.IsInfinity(d) && Math.Abs(d) < DecimalFromDoubleMax:
                 result = (decimal)d; return true;
-            case float f when !float.IsNaN(f) && !float.IsInfinity(f) && Math.Abs((double)f) <= DecimalFromDoubleMax:
+            case float f when !float.IsNaN(f) && !float.IsInfinity(f) && Math.Abs((double)f) < DecimalFromDoubleMax:
                 result = (decimal)f; return true;
             case string s: return decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
             default: result = default; return false;
