@@ -196,26 +196,31 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     }
 
     /// <summary>
-    /// Applies a guard condition to ALL rules defined so far in this builder.
-    /// Rules are skipped when <paramref name="condition"/> returns false.
+    /// Applies a guard condition to ALL rules defined so far in this builder. Rules are skipped
+    /// when <paramref name="condition"/> returns false. If a rule already has a guard from an
+    /// earlier <see cref="When"/>/<see cref="Unless"/> call, the new condition is combined with it
+    /// using logical AND — it does not replace the earlier guard.
     /// </summary>
     public IRuleBuilder<T, TProperty> When(Func<T, bool> condition)
     {
         for (int i = 0; i < _rules.Count; i++)
         {
-            var (cond, msg, _, code) = _rules[i];
-            _rules[i] = (cond, msg, condition, code);
+            var (cond, msg, existingWhen, code) = _rules[i];
+            _rules[i] = (cond, msg, CombineWhen(existingWhen, condition), code);
         }
         for (int i = 0; i < _instanceRules.Count; i++)
         {
-            var (cond, msg, _) = _instanceRules[i];
-            _instanceRules[i] = (cond, msg, condition);
+            var (cond, msg, existingWhen) = _instanceRules[i];
+            _instanceRules[i] = (cond, msg, CombineWhen(existingWhen, condition));
         }
         return this;
     }
 
     public IRuleBuilder<T, TProperty> Unless(Func<T, bool> condition)
         => When(instance => !condition(instance));
+
+    private static Func<T, bool> CombineWhen(Func<T, bool>? existing, Func<T, bool> next)
+        => existing == null ? next : instance => existing(instance) && next(instance);
 
     // -------------------------------------------------------------------------
     // Custom rule
