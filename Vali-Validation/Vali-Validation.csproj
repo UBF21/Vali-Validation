@@ -57,6 +57,10 @@
             - No code changes required if you only ever used the old Errors/ErrorCodes/ErrorsFor/
               HasErrorFor/IsValid surface and never need Warning/Info severities — behavior is
               identical for validators that never call .WithSeverity().
+            - If you directly mutated result.Errors/result.ErrorCodes or assigned them to a
+              variable typed as Dictionary&lt;string, List&lt;string&gt;&gt;, that will now fail to
+              compile — both are now IReadOnlyDictionary&lt;string, List&lt;string&gt;&gt;. Read-only
+              usage (indexer reads, iteration, ContainsKey) is unaffected.
             - To read the new severity-aware data: use result.Failures directly, or
               result.Failures.Where(f =&gt; f.PropertyName == "Email").Select(f =&gt; f.Message)
               instead of result.Errors["Email"].

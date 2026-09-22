@@ -211,6 +211,10 @@ rule in a standard property chain (`.NotEmpty()`, `.Must()`, etc.) — it has no
 - If you never need `Warning`/`Info` severities, **no code changes are required** —
   `Errors`/`ErrorCodes`/`ErrorsFor(...)`/`HasErrorFor(...)`/`FirstError(...)`/`IsValid` all behave
   exactly as before.
+- If you directly mutated `result.Errors`/`result.ErrorCodes` or assigned them to a variable typed
+  as `Dictionary<string, List<string>>`, that will now fail to compile — both are now
+  `IReadOnlyDictionary<string, List<string>>`. Read-only usage (indexer reads, iteration,
+  `ContainsKey`) is unaffected.
 - To read the new severity-aware data:
   ```csharp
   // Old (v2.x): result.Errors["Email"]
