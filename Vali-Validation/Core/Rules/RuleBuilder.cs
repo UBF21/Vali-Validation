@@ -8,6 +8,18 @@ namespace Vali_Validation.Core.Rules;
 
 public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> where T : class
 {
+    // Mutable state for an async rule (MustAsync/DependentRuleAsync) registered via a closure that
+    // reads these fields live at invocation time, so WithMessage/WithErrorCode/WithSeverity/When/
+    // Unless called AFTER the async rule can still mutate it — the closure was already handed to
+    // the validator by then, so a captured-at-registration-time value could never be reached again.
+    private sealed class AsyncRuleState
+    {
+        public MessageSpec Spec;
+        public string? ErrorCode;
+        public Severity Severity = Severity.Error;
+        public Func<T, bool>? When;
+    }
+
     private readonly AbstractValidator<T> _validator;
 
     // Single-value mode: exactly one of these is non-null
@@ -16,6 +28,8 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     private readonly List<(Func<TProperty, bool> condition, MessageSpec message, Func<T, bool>? when, string? code, Severity severity)> _rules = new();
     private readonly List<(Func<T, bool> instanceCondition, MessageSpec message, Func<T, bool>? when)> _instanceRules = new();
+    private readonly List<AsyncRuleState> _asyncRuleStates = new();
+    private bool _lastAdditionWasAsync;
     private readonly string _propertyName;
 
     private string _effectivePropertyName;
@@ -59,9 +73,21 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     internal Func<T, TProperty>? PropertyFunc => _propertyFunc;
     internal AbstractValidator<T> Validator => _validator;
 
-    internal void AddAsyncRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _validator.AddRule(WrapWithAmbientCondition(rule), () => _ruleSets);
+    // Default every direct registration to "not the async-modifiers target": MustAsync/DependentRuleAsync
+    // flip _lastAdditionWasAsync back to true themselves, right after calling this, once their
+    // AsyncRuleState is in place. Any other caller (Custom, SetValidator, InjectValidator, ...) has no
+    // AsyncRuleState to route WithMessage/WithErrorCode/WithSeverity/When to, so it must land here.
+    internal void AddAsyncRule(Func<T, CancellationToken, Task<ValidationResult>> rule)
+    {
+        _validator.AddRule(WrapWithAmbientCondition(rule), () => _ruleSets);
+        _lastAdditionWasAsync = false;
+    }
 
-    internal void AddSyncRule(Func<T, ValidationResult> rule) => _validator.AddRule(WrapWithAmbientCondition(rule), () => _ruleSets);
+    internal void AddSyncRule(Func<T, ValidationResult> rule)
+    {
+        _validator.AddRule(WrapWithAmbientCondition(rule), () => _ruleSets);
+        _lastAdditionWasAsync = false;
+    }
 
     private Func<T, ValidationResult> WrapWithAmbientCondition(Func<T, ValidationResult> rule)
     {
@@ -184,6 +210,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
             _rules.Add((_currentCondition, spec, _ambientCondition, null, Severity.Error));
             _currentCondition = null;
             _currentMessageSpec = null;
+            _lastAdditionWasAsync = false;
         }
 
         EnsureRegistered();
@@ -192,6 +219,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     private void AddInstanceCondition(Func<T, bool> condition, MessageSpec message)
     {
         _instanceRules.Add((condition, message, _ambientCondition));
+        _lastAdditionWasAsync = false;
         EnsureRegistered();
     }
 
@@ -201,6 +229,15 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     public IRuleBuilder<T, TProperty> WithMessage(string? message)
     {
+        if (_lastAdditionWasAsync && _asyncRuleStates.Count > 0)
+        {
+            var state = _asyncRuleStates[^1];
+            state.Spec = message != null
+                ? MessageSpec.Raw(message, state.Spec.Args)
+                : MessageSpec.Localized(MessageKey.RuleBuilderDefault);
+            return this;
+        }
+
         if (_rules.Count > 0)
         {
             int last = _rules.Count - 1;
@@ -215,6 +252,12 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     public IRuleBuilder<T, TProperty> WithErrorCode(string code)
     {
+        if (_lastAdditionWasAsync && _asyncRuleStates.Count > 0)
+        {
+            _asyncRuleStates[^1].ErrorCode = code;
+            return this;
+        }
+
         if (_rules.Count > 0)
         {
             int last = _rules.Count - 1;
@@ -226,6 +269,12 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     public IRuleBuilder<T, TProperty> WithSeverity(Severity severity)
     {
+        if (_lastAdditionWasAsync && _asyncRuleStates.Count > 0)
+        {
+            _asyncRuleStates[^1].Severity = severity;
+            return this;
+        }
+
         if (_rules.Count > 0)
         {
             int last = _rules.Count - 1;
@@ -282,6 +331,8 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
             var (cond, msg, existingWhen) = _instanceRules[i];
             _instanceRules[i] = (cond, msg, CombineWhen(existingWhen, condition));
         }
+        foreach (var state in _asyncRuleStates)
+            state.When = CombineWhen(state.When, condition);
         return this;
     }
 

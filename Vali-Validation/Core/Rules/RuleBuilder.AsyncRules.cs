@@ -11,17 +11,22 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         if (predicateAsync == null) throw new ArgumentNullException(nameof(predicateAsync));
 
-        MessageSpec spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.MustAsync);
+        var state = new AsyncRuleState { Spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.MustAsync) };
         _currentMessageSpec = null;
+        _asyncRuleStates.Add(state);
 
         AddAsyncRule(async (instance, _) =>
         {
             var result = new ValidationResult();
+            if (state.When != null && !state.When(instance)) return result;
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             bool isValid = await predicateAsync(value).ConfigureAwait(false);
-            if (!isValid) result.AddError(_effectivePropertyName, ResolveMessage(spec, _effectivePropertyName, value));
+            if (!isValid) result.AddFailure(_effectivePropertyName, ResolveMessage(state.Spec, _effectivePropertyName, value), state.Severity, state.ErrorCode);
             return result;
         });
+        // AddAsyncRule defaults _lastAdditionWasAsync to false (it's the shared choke point every
+        // direct rule registration funnels through); flip it back to true now that this state is in place.
+        _lastAdditionWasAsync = true;
 
         return this;
     }
@@ -30,17 +35,20 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         if (predicateAsync == null) throw new ArgumentNullException(nameof(predicateAsync));
 
-        MessageSpec spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.MustAsync);
+        var state = new AsyncRuleState { Spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.MustAsync) };
         _currentMessageSpec = null;
+        _asyncRuleStates.Add(state);
 
         AddAsyncRule(async (instance, ct) =>
         {
             var result = new ValidationResult();
+            if (state.When != null && !state.When(instance)) return result;
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             bool isValid = await predicateAsync(value, ct).ConfigureAwait(false);
-            if (!isValid) result.AddError(_effectivePropertyName, ResolveMessage(spec, _effectivePropertyName, value));
+            if (!isValid) result.AddFailure(_effectivePropertyName, ResolveMessage(state.Spec, _effectivePropertyName, value), state.Severity, state.ErrorCode);
             return result;
         });
+        _lastAdditionWasAsync = true;
 
         return this;
     }
@@ -60,20 +68,26 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var dependentPropertyName = AbstractValidator<T>.GetPropertyName(dependentPropertyExpression.Body);
         var dependentFunc = dependentPropertyExpression.Compile();
 
-        MessageSpec spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.DependentRuleAsync,
-            new Dictionary<string, object> { ["dependentPropertyName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(dependentPropertyName) });
+        var state = new AsyncRuleState
+        {
+            Spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.DependentRuleAsync,
+                new Dictionary<string, object> { ["dependentPropertyName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(dependentPropertyName) })
+        };
         _currentMessageSpec = null;
+        _asyncRuleStates.Add(state);
 
         AddAsyncRule(async (instance, _) =>
         {
             var result = new ValidationResult();
+            if (state.When != null && !state.When(instance)) return result;
             TProperty value = propertyFunc(instance);
             TDependent dependentValue = dependentFunc(instance);
 
             bool isValid = await predicateAsync(value, dependentValue).ConfigureAwait(false);
-            if (!isValid) result.AddError(propertyName, ResolveMessage(spec, propertyName, value));
+            if (!isValid) result.AddFailure(propertyName, ResolveMessage(state.Spec, propertyName, value), state.Severity, state.ErrorCode);
             return result;
         });
+        _lastAdditionWasAsync = true;
 
         return this;
     }

@@ -159,18 +159,15 @@ public class SeverityTests
     }
 
     [Fact]
-    public async Task WithSeverity_HasNoEffectOnMustAsync_StaysErrorSeverityAndStillBlocksIsValid()
+    public async Task WithSeverity_AppliesToMustAsync_BecomesWarningAndNoLongerBlocksIsValid()
     {
-        // Documented boundary: MustAsync bypasses the synchronous _rules chain entirely, so
-        // .WithSeverity() silently has no effect on it — the failure stays Severity.Error and
-        // still blocks IsValid, exactly like calling .WithSeverity() before any rule exists.
         var validator = new AsyncSeverityBoundaryValidator();
 
         var result = await validator.ValidateAsync(new AsyncSeverityDto { Email = "anything" });
 
-        Assert.False(result.IsValid);
+        Assert.True(result.IsValid);
         var failure = Assert.Single(result.Failures);
-        Assert.Equal(Severity.Error, failure.Severity);
+        Assert.Equal(Severity.Warning, failure.Severity);
     }
 
     private class AsyncSeverityDto
