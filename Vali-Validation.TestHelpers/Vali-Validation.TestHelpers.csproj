@@ -25,6 +25,8 @@
 
         <!-- Discoverability -->
         <PackageTags>validation;testing;xunit;nunit;mstest;assertions;vali</PackageTags>
+        <PackageIcon>VV.png</PackageIcon>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
 
         <!-- Source Link / Symbols -->
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -48,6 +50,17 @@
             - ShouldNotHaveValidationErrorFor(string propertyName)
         </PackageReleaseNotes>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\Vali-Validation\VV.png" Link="VV.png">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+        <None Include="README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
