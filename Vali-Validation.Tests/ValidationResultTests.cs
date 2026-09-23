@@ -251,4 +251,10 @@ public class ValidationResultTests
         Assert.Equal("DISCOUNT_HIGH", target.Failures[0].ErrorCode);
         Assert.True(target.IsValid);
     }
+
+    [Fact]
+    public void ValidationResult_IsSealed()
+    {
+        Assert.True(typeof(ValidationResult).IsSealed);
+    }
 }

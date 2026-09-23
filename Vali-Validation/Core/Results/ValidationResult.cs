@@ -2,10 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace Vali_Validation.Core.Results;
 
-public class ValidationResult
+public sealed class ValidationResult
 {
     [JsonPropertyName("isValid")]
-    public bool IsValid => !Failures.Any(f => f.Severity == Severity.Error);
+    public bool IsValid => !Failures.Exists(f => f.Severity == Severity.Error);
 
     [JsonPropertyName("failures")]
     public List<ValidationFailure> Failures { get; } = new();
