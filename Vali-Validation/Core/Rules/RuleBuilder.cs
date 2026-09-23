@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Linq.Expressions;
 using Vali_Validation.Core.Results;
 using Vali_Validation.Core.Validators;
@@ -116,7 +117,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
             string resolved = message
                 .Replace("{PropertyName}", key)
-                .Replace("{PropertyValue}", element?.ToString() ?? "null");
+                .Replace("{PropertyValue}", FormatPropertyValue(element));
             result.AddFailure(key, resolved, severity, code);
             if (_stopOnFirstFailure) break;
         }
@@ -141,7 +142,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
             string resolved = message
                 .Replace("{PropertyName}", _effectivePropertyName)
-                .Replace("{PropertyValue}", value?.ToString() ?? "null");
+                .Replace("{PropertyValue}", FormatPropertyValue(value));
             result.AddFailure(_effectivePropertyName, resolved, severity, code);
             if (_stopOnFirstFailure) break;
         }
@@ -270,6 +271,17 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     private static Func<T, bool> CombineWhen(Func<T, bool>? existing, Func<T, bool> next)
         => existing == null ? next : instance => existing(instance) && next(instance);
+
+    private const int MaxPropertyValueLength = 200;
+
+    private static string FormatPropertyValue(object? value)
+    {
+        if (value == null) return "null";
+        string text = value.ToString() ?? "null";
+        if (text.Length > MaxPropertyValueLength)
+            text = text.Substring(0, MaxPropertyValueLength) + "…(truncated)";
+        return new string(text.Where(c => !char.IsControl(c)).ToArray());
+    }
 
     // -------------------------------------------------------------------------
     // Custom rule
