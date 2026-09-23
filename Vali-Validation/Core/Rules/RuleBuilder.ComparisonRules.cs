@@ -137,7 +137,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
         MessageSpec spec = MessageSpec.Localized(MessageKey.EqualToProperty,
-            new Dictionary<string, object> { ["otherName"] = otherName });
+            new Dictionary<string, object> { ["otherName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(otherName) });
         AddSyncRule(instance =>
         {
             var result = new ValidationResult();
@@ -155,7 +155,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
         MessageSpec spec = MessageSpec.Localized(MessageKey.GreaterThanProperty,
-            new Dictionary<string, object> { ["otherName"] = otherName });
+            new Dictionary<string, object> { ["otherName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(otherName) });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
@@ -170,7 +170,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
         MessageSpec spec = MessageSpec.Localized(MessageKey.GreaterThanOrEqualToProperty,
-            new Dictionary<string, object> { ["otherName"] = otherName });
+            new Dictionary<string, object> { ["otherName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(otherName) });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
@@ -186,7 +186,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
         MessageSpec spec = MessageSpec.Localized(MessageKey.LessThanProperty,
-            new Dictionary<string, object> { ["otherName"] = otherName });
+            new Dictionary<string, object> { ["otherName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(otherName) });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
@@ -201,7 +201,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
         MessageSpec spec = MessageSpec.Localized(MessageKey.LessThanOrEqualToProperty,
-            new Dictionary<string, object> { ["otherName"] = otherName });
+            new Dictionary<string, object> { ["otherName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(otherName) });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
@@ -217,7 +217,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
         MessageSpec spec = MessageSpec.Localized(MessageKey.NotEqualToProperty,
-            new Dictionary<string, object> { ["otherName"] = otherName });
+            new Dictionary<string, object> { ["otherName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(otherName) });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;

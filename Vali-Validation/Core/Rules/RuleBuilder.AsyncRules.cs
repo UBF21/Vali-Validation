@@ -61,7 +61,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var dependentFunc = dependentPropertyExpression.Compile();
 
         MessageSpec spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.DependentRuleAsync,
-            new Dictionary<string, object> { ["dependentPropertyName"] = dependentPropertyName });
+            new Dictionary<string, object> { ["dependentPropertyName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(dependentPropertyName) });
         _currentMessageSpec = null;
 
         AddAsyncRule(async (instance, _) =>

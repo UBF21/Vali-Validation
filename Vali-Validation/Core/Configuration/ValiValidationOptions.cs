@@ -29,9 +29,14 @@ public static class ValiValidationOptions
 
         /// <summary>
         /// Transforms the property name substituted into the <c>{PropertyName}</c> placeholder in
-        /// message text. Does NOT affect the key used in <c>ValidationResult.Errors</c>/failure
-        /// entries — see <see cref="PropertyNameResolver"/> for that. Default: identity (no transform,
-        /// preserves today's behavior).
+        /// message text (for the rule's own property, as well as any other property referenced by
+        /// name in a cross-property rule, e.g. <c>otherName</c> in <c>EqualToProperty</c> or
+        /// <c>dependentPropertyName</c> in <c>DependentRuleAsync</c>). Does NOT affect the key used
+        /// in <c>ValidationResult.Errors</c>/failure entries — see <see cref="PropertyNameResolver"/>
+        /// for that. When both resolvers are configured, the name passed into
+        /// <see cref="DisplayNameResolver"/> is already the <see cref="PropertyNameResolver"/>-transformed
+        /// name, never the raw untransformed one. Default: identity (no transform, preserves today's
+        /// behavior).
         /// </summary>
         public static Func<string, string> DisplayNameResolver { get; set; } = name => name;
 

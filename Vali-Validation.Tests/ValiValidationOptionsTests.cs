@@ -29,6 +29,20 @@ public class GlobalConfigOverridingValidator : AbstractValidator<GlobalConfigDto
     }
 }
 
+public class CrossPropertyDto
+{
+    public int Value { get; set; }
+    public int OtherValue { get; set; }
+}
+
+public class CrossPropertyValidator : AbstractValidator<CrossPropertyDto>
+{
+    public CrossPropertyValidator()
+    {
+        RuleFor(x => x.Value).GreaterThanProperty(x => x.OtherValue);
+    }
+}
+
 public class ValiValidationOptionsTests : IDisposable
 {
     // Reset global state after every test — these are process-wide statics, and leaking a
@@ -127,5 +141,21 @@ public class ValiValidationOptionsTests : IDisposable
 
         Assert.True(result.HasErrorFor("first_name"));
         Assert.False(result.HasErrorFor("FirstName"));
+    }
+
+    [Fact]
+    public void DisplayNameResolver_AppliesToCrossPropertyReferences()
+    {
+        // Both resolvers configured simultaneously — the cross-property "otherName" substitution
+        // must go through PropertyNameResolver first (as GetPropertyName always does), then
+        // DisplayNameResolver on top, exactly like the primary property's own {PropertyName}.
+        ValiValidationOptions.Global.PropertyNameResolver = name => name == "OtherValue" ? "other_value" : name;
+        ValiValidationOptions.Global.DisplayNameResolver = name => name == "other_value" ? "Other Value" : name;
+
+        var result = new CrossPropertyValidator().Validate(new CrossPropertyDto { Value = 1, OtherValue = 5 });
+
+        Assert.Contains("Other Value", result.Errors["Value"][0]);
+        Assert.DoesNotContain("other_value", result.Errors["Value"][0]);
+        Assert.DoesNotContain("OtherValue", result.Errors["Value"][0]);
     }
 }
