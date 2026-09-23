@@ -43,6 +43,14 @@ public class CrossPropertyValidator : AbstractValidator<CrossPropertyDto>
     }
 }
 
+public class MultipleOfPropertyValidator : AbstractValidator<CrossPropertyDto>
+{
+    public MultipleOfPropertyValidator()
+    {
+        RuleFor(x => x.Value).MultipleOfProperty(x => x.OtherValue);
+    }
+}
+
 public class ValiValidationOptionsTests : IDisposable
 {
     // Reset global state after every test — these are process-wide statics, and leaking a
@@ -153,6 +161,21 @@ public class ValiValidationOptionsTests : IDisposable
         ValiValidationOptions.Global.DisplayNameResolver = name => name == "other_value" ? "Other Value" : name;
 
         var result = new CrossPropertyValidator().Validate(new CrossPropertyDto { Value = 1, OtherValue = 5 });
+
+        Assert.Contains("Other Value", result.Errors["Value"][0]);
+        Assert.DoesNotContain("other_value", result.Errors["Value"][0]);
+        Assert.DoesNotContain("OtherValue", result.Errors["Value"][0]);
+    }
+
+    [Fact]
+    public void DisplayNameResolver_AppliesToMultipleOfPropertyReference()
+    {
+        // Same gap, different cross-property rule — MultipleOfProperty builds its "otherName"
+        // Args entry independently of ComparisonRules' methods, so it needs its own regression check.
+        ValiValidationOptions.Global.PropertyNameResolver = name => name == "OtherValue" ? "other_value" : name;
+        ValiValidationOptions.Global.DisplayNameResolver = name => name == "other_value" ? "Other Value" : name;
+
+        var result = new MultipleOfPropertyValidator().Validate(new CrossPropertyDto { Value = 5, OtherValue = 2 });
 
         Assert.Contains("Other Value", result.Errors["Value"][0]);
         Assert.DoesNotContain("other_value", result.Errors["Value"][0]);

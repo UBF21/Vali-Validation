@@ -79,7 +79,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var otherName = Validators.AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
         MessageSpec spec = MessageSpec.Localized(MessageKey.MultipleOfProperty,
-            new Dictionary<string, object> { ["otherName"] = otherName });
+            new Dictionary<string, object> { ["otherName"] = Configuration.ValiValidationOptions.Global.DisplayNameResolver(otherName) });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
