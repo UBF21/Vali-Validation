@@ -56,6 +56,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     internal string EffectivePropertyName => _effectivePropertyName;
     internal Func<T, TProperty>? PropertyFunc => _propertyFunc;
+    internal AbstractValidator<T> Validator => _validator;
 
     internal void AddAsyncRule(Func<T, CancellationToken, Task<ValidationResult>> rule) => _validator.AddRule(WrapWithAmbientCondition(rule), () => _ruleSets);
 

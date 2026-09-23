@@ -1,3 +1,4 @@
+using Vali_Validation.Core.Rules;
 using Vali_Validation.Core.Validators;
 using Xunit;
 
@@ -6,6 +7,71 @@ namespace Vali_Validation.Tests;
 public class WhenAsyncCancellationDto
 {
     public string? Name { get; set; }
+}
+
+public class NestedWhenAsyncChildDto
+{
+    public string? Code { get; set; }
+}
+
+public class NestedWhenAsyncChildValidator : AbstractValidator<NestedWhenAsyncChildDto>
+{
+    public CancellationToken? ObservedToken;
+
+    public NestedWhenAsyncChildValidator()
+    {
+        // WhenAsync only — no true async rule — so AsyncRules.Count == 0 and SetValidator
+        // routes this validator through the sync Validate() path.
+        RuleFor(x => x.Code).NotEmpty().WhenAsync(async (instance, ct) =>
+        {
+            ObservedToken = ct;
+            await Task.Yield();
+            return true;
+        });
+    }
+}
+
+public class NestedWhenAsyncParentDto
+{
+    public NestedWhenAsyncChildDto? Child { get; set; }
+}
+
+public class NestedWhenAsyncParentValidator : AbstractValidator<NestedWhenAsyncParentDto>
+{
+    public readonly NestedWhenAsyncChildValidator ChildValidator = new();
+
+    public NestedWhenAsyncParentValidator()
+    {
+        RuleFor(x => x.Child).SetValidator(ChildValidator);
+    }
+}
+
+public class ParallelWhenAsyncDto
+{
+    public string? A { get; set; }
+    public string? B { get; set; }
+}
+
+public class ParallelWhenAsyncValidator : AbstractValidator<ParallelWhenAsyncDto>
+{
+    public CancellationToken? ObservedTokenA;
+    public CancellationToken? ObservedTokenB;
+
+    public ParallelWhenAsyncValidator()
+    {
+        RuleFor(x => x.A).NotEmpty().WhenAsync(async (instance, ct) =>
+        {
+            ObservedTokenA = ct;
+            await Task.Yield();
+            return true;
+        });
+        RuleFor(x => x.B).NotEmpty().WhenAsync(async (instance, ct) =>
+        {
+            ObservedTokenB = ct;
+            await Task.Yield();
+            return true;
+        });
+    }
 }
 
 public class WhenAsyncCancellationValidator : AbstractValidator<WhenAsyncCancellationDto>
@@ -98,5 +164,42 @@ public class WhenAsyncCancellationTests
         validator.Validate(new WhenAsyncCancellationDto { Name = "Ana" });
 
         Assert.Equal(CancellationToken.None, validator.ObservedToken);
+    }
+
+    [Fact]
+    public async Task WhenAsync_OnNestedSetValidatorChild_ObservesTheOuterValidateAsyncToken()
+    {
+        // The child validator's WhenAsync is its ONLY async-flavored construct (no MustAsync),
+        // so nestedValidator.AsyncRules.Count == 0 and SetValidator routes it through the sync
+        // Validate() path. AbstractValidator<NestedWhenAsyncChildDto> has its own, separate
+        // AsyncLocal field from AbstractValidator<NestedWhenAsyncParentDto> — without forwarding
+        // the ambient token across that type boundary, the child would always observe None.
+        var parentValidator = new NestedWhenAsyncParentValidator();
+        using var cts = new CancellationTokenSource();
+
+        await parentValidator.ValidateAsync(
+            new NestedWhenAsyncParentDto { Child = new NestedWhenAsyncChildDto { Code = "ABC" } },
+            cts.Token);
+
+        Assert.Equal(cts.Token, parentValidator.ChildValidator.ObservedToken);
+    }
+
+    [Fact]
+    public async Task WhenAsync_UnderValidateParallelAsync_ObservesTheRealTokenAcrossMultipleAsyncRules()
+    {
+        // WhenAsync-gated rules run as sync rules (WhenAsync only decorates an existing rule's
+        // guard condition; it never itself becomes an _asyncRules entry — only MustAsync/
+        // DependentRuleAsync/SetValidator's async branch do). The AsyncLocal is set for the
+        // whole ValidateParallelAsync call, so both the sync-rules phase and the Task.WhenAll
+        // fan-out observe the same ambient token; this asserts that holds for two independent
+        // WhenAsync-gated rules evaluated under ValidateParallelAsync.
+        var validator = new ParallelWhenAsyncValidator();
+        using var cts = new CancellationTokenSource();
+
+        await validator.ValidateParallelAsync(
+            new ParallelWhenAsyncDto { A = "x", B = "y" }, cts.Token);
+
+        Assert.Equal(cts.Token, validator.ObservedTokenA);
+        Assert.Equal(cts.Token, validator.ObservedTokenB);
     }
 }

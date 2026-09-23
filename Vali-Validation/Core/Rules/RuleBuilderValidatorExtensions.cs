@@ -42,7 +42,9 @@ public static class RuleBuilderValidatorExtensions
             rb.AddSyncRule(instance =>
             {
                 TProperty? value = rb.PropertyFunc?.Invoke(instance);
-                return value == null ? new ValidationResult() : MergeNested(nestedValidator.Validate(value), prefix);
+                if (value == null) return new ValidationResult();
+                var nestedResult = nestedValidator.ValidateWithAmbientToken(value, rb.Validator.CurrentCancellationToken);
+                return MergeNested(nestedResult, prefix);
             });
         }
         else

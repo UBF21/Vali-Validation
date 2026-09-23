@@ -158,6 +158,27 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
         return result;
     }
 
+    /// <summary>
+    /// Runs <see cref="Validate"/> with <paramref name="token"/> set as this validator's ambient
+    /// <see cref="CurrentCancellationToken"/> for the duration of the call. Used by
+    /// <c>SetValidator</c>'s synchronous path to forward an outer validator's ambient token into a
+    /// nested validator's own <see cref="AsyncLocal{T}"/> field, since each closed
+    /// <see cref="AbstractValidator{T}"/> type owns a separate static field.
+    /// </summary>
+    internal ValidationResult ValidateWithAmbientToken(T instance, CancellationToken token)
+    {
+        var previousToken = _currentCancellationToken.Value;
+        _currentCancellationToken.Value = token;
+        try
+        {
+            return Validate(instance);
+        }
+        finally
+        {
+            _currentCancellationToken.Value = previousToken;
+        }
+    }
+
     /// <inheritdoc/>
     public async Task<ValidationResult> ValidateAsync(T instance, CancellationToken cancellationToken = default)
     {
