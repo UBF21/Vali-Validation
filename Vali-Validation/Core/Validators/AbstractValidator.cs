@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using Vali_Validation.Core.Exceptions;
 using Vali_Validation.Core.Results;
@@ -13,6 +14,14 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
 {
     private readonly List<Func<T, ValidationResult>> _syncRules = new();
     private readonly List<Func<T, CancellationToken, Task<ValidationResult>>> _asyncRules = new();
+
+    private static readonly ConcurrentDictionary<string, Delegate> _compiledExpressionCache = new();
+
+    private static Func<T, TResult> CompileCached<TResult>(Expression<Func<T, TResult>> expression)
+    {
+        string key = typeof(TResult).FullName + ":" + expression.ToString();
+        return (Func<T, TResult>)_compiledExpressionCache.GetOrAdd(key, _ => expression.Compile());
+    }
 
     protected virtual CascadeMode GlobalCascadeMode => CascadeMode.Continue;
 
@@ -42,7 +51,7 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
     public IRuleBuilder<T, TProperty> RuleFor<TProperty>(Expression<Func<T, TProperty>> expression)
     {
         var propertyName = GetPropertyName(expression.Body);
-        var propertyFunc = expression.Compile();
+        var propertyFunc = CompileCached(expression);
         return new RuleBuilder<T, TProperty>(this, propertyFunc, propertyName, _ambientCondition);
     }
 
@@ -54,7 +63,7 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
         Expression<Func<T, IEnumerable<TElement>>> expression)
     {
         var collectionName = GetPropertyName(expression.Body);
-        var collectionFunc = expression.Compile();
+        var collectionFunc = CompileCached(expression);
         return new RuleBuilder<T, TElement>(this, collectionFunc, collectionName, _ambientCondition);
     }
 
@@ -74,7 +83,7 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
         Func<TElement, bool> filter)
     {
         var collectionName = GetPropertyName(expression.Body);
-        var collectionFunc = expression.Compile();
+        var collectionFunc = CompileCached(expression);
         Func<T, IEnumerable<TElement>> filteredFunc =
             instance => collectionFunc(instance)?.Where(filter).ToList() ?? new List<TElement>();
         return new RuleBuilder<T, TElement>(this, filteredFunc, collectionName, _ambientCondition);
@@ -101,7 +110,7 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
     /// </summary>
     protected ICaseBuilder<T, TKey> RuleSwitch<TKey>(Expression<Func<T, TKey>> keyExpression)
     {
-        var keyFunc = keyExpression.Compile();
+        var keyFunc = CompileCached(keyExpression);
         return new SwitchCaseBuilder<T, TKey>(this, keyFunc, _ambientCondition);
     }
 
