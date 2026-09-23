@@ -126,8 +126,9 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     private string ResolveMessage(MessageSpec spec, string propertyNameForPlaceholder, object? valueForPlaceholder)
     {
         string template = spec.ResolveTemplate(_validator.ActiveLanguage);
+        string displayName = Configuration.ValiValidationOptions.Global.DisplayNameResolver(propertyNameForPlaceholder);
         string resolved = template
-            .Replace("{PropertyName}", propertyNameForPlaceholder)
+            .Replace("{PropertyName}", displayName)
             .Replace("{PropertyValue}", FormatPropertyValue(valueForPlaceholder));
         if (spec.Args != null)
             foreach (var (argKey, argValue) in spec.Args)

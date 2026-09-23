@@ -35,4 +35,13 @@ public static class LanguageManager
             return template;
         return _catalogs["en"][key];
     }
+
+    /// <summary>
+    /// Whether <paramref name="languageCode"/> has a registered catalog (built-in or via
+    /// <see cref="RegisterLanguage"/>). Used by <see cref="Validators.AbstractValidator{T}.ActiveLanguage"/>
+    /// to decide whether <see cref="System.Globalization.CultureInfo.CurrentUICulture"/> actually
+    /// resolves to a known language before using it, rather than passing through any non-empty ISO
+    /// code and silently landing on <see cref="GetTemplate"/>'s hardcoded English safety net.
+    /// </summary>
+    internal static bool HasLanguage(string languageCode) => _catalogs.ContainsKey(languageCode);
 }

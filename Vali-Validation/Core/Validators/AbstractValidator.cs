@@ -41,19 +41,32 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
     /// The language code ("en", "es", ...) used to resolve built-in rule messages for the
     /// currently-executing validation call. Precedence: an explicit <c>ValidationOptions.WithLanguage(...)</c>
     /// override for this call, then <see cref="System.Globalization.CultureInfo.CurrentUICulture"/>,
-    /// then <c>"en"</c>. <strong>Known limitation:</strong> nested validators attached via
-    /// <c>SetValidator</c> do NOT inherit an outer call's explicit <c>WithLanguage</c> override — each
-    /// resolves independently from <see cref="System.Globalization.CultureInfo.CurrentUICulture"/>,
-    /// which is thread-ambient and therefore already consistent across nesting without forwarding.
+    /// then <see cref="Configuration.ValiValidationOptions.Global"/>'s <c>DefaultLanguage</c> as the
+    /// 3rd-precedence fallback, before the final English safety net inside
+    /// <c>LanguageManager.GetTemplate</c> itself. <strong>Known limitation:</strong> nested validators
+    /// attached via <c>SetValidator</c> do NOT inherit an outer call's explicit <c>WithLanguage</c>
+    /// override — each resolves independently from
+    /// <see cref="System.Globalization.CultureInfo.CurrentUICulture"/>, which is thread-ambient and
+    /// therefore already consistent across nesting without forwarding.
     /// </summary>
     internal string ActiveLanguage =>
         _explicitLanguage.Value
-        ?? NormalizeLanguageCode(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)
-        ?? "en";
+        ?? ResolveCultureLanguage()
+        ?? Configuration.ValiValidationOptions.Global.DefaultLanguage;
+
+    // Only treat CurrentUICulture as a resolved language when it actually has a registered
+    // catalog — TwoLetterISOLanguageName is virtually never empty, so without this check
+    // Global.DefaultLanguage would never be reached and an unregistered culture (e.g. "fr")
+    // would silently fall straight through to GetTemplate's hardcoded English safety net.
+    private static string? ResolveCultureLanguage()
+    {
+        string? code = NormalizeLanguageCode(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+        return code != null && Localization.LanguageManager.HasLanguage(code) ? code : null;
+    }
 
     private static string? NormalizeLanguageCode(string? code) => string.IsNullOrEmpty(code) ? null : code;
 
-    protected virtual CascadeMode GlobalCascadeMode => CascadeMode.Continue;
+    protected virtual CascadeMode GlobalCascadeMode => Configuration.ValiValidationOptions.Global.DefaultCascadeMode;
 
     /// <summary>
     /// Runs before any rules are evaluated. Override to short-circuit validation entirely —
@@ -268,8 +281,14 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
 
     internal static string GetPropertyName(Expression expression)
     {
+        string rawName = ExtractRawPropertyName(expression);
+        return Configuration.ValiValidationOptions.Global.PropertyNameResolver(rawName);
+    }
+
+    private static string ExtractRawPropertyName(Expression expression)
+    {
         if (expression is MemberExpression member) return member.Member.Name;
-        if (expression is UnaryExpression unary) return GetPropertyName(unary.Operand);
+        if (expression is UnaryExpression unary) return ExtractRawPropertyName(unary.Operand);
         throw new ArgumentException($"Cannot extract property name from expression: {expression}");
     }
 }
