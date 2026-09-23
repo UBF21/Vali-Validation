@@ -48,6 +48,14 @@ public interface IRuleBuilder<T, TProperty> where T : class
     /// <exception cref="ArgumentException"><paramref name="ruleSetNames"/> is empty.</exception>
     IRuleBuilder<T, TProperty> InRuleSet(params string[] ruleSetNames);
 
+    /// <summary>
+    /// Attaches a reusable <see cref="IPropertyValidator{TProperty}"/> as the current rule. Like
+    /// every other rule method, integrates with <see cref="WithMessage"/>, <see cref="WithErrorCode"/>,
+    /// <see cref="WithSeverity"/>, <see cref="When"/>, and <see cref="Unless"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="validator"/> is null.</exception>
+    IRuleBuilder<T, TProperty> SetPropertyValidator(IPropertyValidator<TProperty> validator);
+
     // -------------------------------------------------------------------------
     // Built-in rules
     // -------------------------------------------------------------------------
