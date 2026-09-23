@@ -152,7 +152,9 @@ public interface IRuleBuilder<T, TProperty> where T : class
     /// This blocks the calling thread until <paramref name="condition"/> completes (offloaded to the
     /// thread pool to avoid deadlocking on a captured <see cref="SynchronizationContext"/>). Prefer
     /// <see cref="MustAsync(Func{TProperty, CancellationToken, Task{bool}})"/> for rules that must not
-    /// block the calling thread.
+    /// block the calling thread. The <see cref="CancellationToken"/> passed to <paramref name="condition"/>
+    /// is the real token passed to <c>ValidateAsync</c>/<c>ValidateParallelAsync</c>, or
+    /// <see cref="CancellationToken.None"/> when evaluated under a synchronous <c>Validate()</c> call.
     /// </remarks>
     IRuleBuilder<T, TProperty> WhenAsync(Func<T, CancellationToken, Task<bool>> condition);
 
@@ -163,7 +165,9 @@ public interface IRuleBuilder<T, TProperty> where T : class
     /// This blocks the calling thread until <paramref name="condition"/> completes (offloaded to the
     /// thread pool to avoid deadlocking on a captured <see cref="SynchronizationContext"/>). Prefer
     /// <see cref="MustAsync(Func{TProperty, CancellationToken, Task{bool}})"/> for rules that must not
-    /// block the calling thread.
+    /// block the calling thread. The <see cref="CancellationToken"/> passed to <paramref name="condition"/>
+    /// is the real token passed to <c>ValidateAsync</c>/<c>ValidateParallelAsync</c>, or
+    /// <see cref="CancellationToken.None"/> when evaluated under a synchronous <c>Validate()</c> call.
     /// </remarks>
     IRuleBuilder<T, TProperty> UnlessAsync(Func<T, CancellationToken, Task<bool>> condition);
 

@@ -23,6 +23,18 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
         return (Func<T, TResult>)_compiledExpressionCache.GetOrAdd(key, _ => expression.Compile());
     }
 
+    private static readonly AsyncLocal<CancellationToken> _currentCancellationToken = new();
+
+    /// <summary>
+    /// The <see cref="CancellationToken"/> passed to the currently-executing <see cref="ValidateAsync"/>
+    /// or <see cref="ValidateParallelAsync"/> call on this logical async call chain, or
+    /// <see cref="CancellationToken.None"/> if no async validation call is in progress (including
+    /// during a synchronous <see cref="Validate"/> call). Used by <c>WhenAsync</c>/<c>UnlessAsync</c>'s
+    /// blocking-bridge mechanism to observe real cancellation instead of always using
+    /// <see cref="CancellationToken.None"/>.
+    /// </summary>
+    internal CancellationToken CurrentCancellationToken => _currentCancellationToken.Value;
+
     protected virtual CascadeMode GlobalCascadeMode => CascadeMode.Continue;
 
     /// <summary>
@@ -149,19 +161,28 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
     /// <inheritdoc/>
     public async Task<ValidationResult> ValidateAsync(T instance, CancellationToken cancellationToken = default)
     {
-        var result = new ValidationResult();
-        if (!PreValidate(instance, result)) return result;
-        foreach (var rule in _syncRules)
+        var previousToken = _currentCancellationToken.Value;
+        _currentCancellationToken.Value = cancellationToken;
+        try
         {
-            result.Merge(rule(instance));
-            if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
+            var result = new ValidationResult();
+            if (!PreValidate(instance, result)) return result;
+            foreach (var rule in _syncRules)
+            {
+                result.Merge(rule(instance));
+                if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
+            }
+            foreach (var rule in _asyncRules)
+            {
+                result.Merge(await rule(instance, cancellationToken).ConfigureAwait(false));
+                if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
+            }
+            return result;
         }
-        foreach (var rule in _asyncRules)
+        finally
         {
-            result.Merge(await rule(instance, cancellationToken).ConfigureAwait(false));
-            if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
+            _currentCancellationToken.Value = previousToken;
         }
-        return result;
     }
 
     /// <inheritdoc/>
@@ -181,20 +202,29 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
     /// <inheritdoc/>
     public async Task<ValidationResult> ValidateParallelAsync(T instance, CancellationToken cancellationToken = default)
     {
-        var result = new ValidationResult();
-        if (!PreValidate(instance, result)) return result;
-        foreach (var rule in _syncRules)
-            result.Merge(rule(instance));
-
-        if (_asyncRules.Count > 0)
+        var previousToken = _currentCancellationToken.Value;
+        _currentCancellationToken.Value = cancellationToken;
+        try
         {
-            var tasks = _asyncRules.Select(rule => rule(instance, cancellationToken));
-            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-            foreach (var partial in results)
-                result.Merge(partial);
-        }
+            var result = new ValidationResult();
+            if (!PreValidate(instance, result)) return result;
+            foreach (var rule in _syncRules)
+                result.Merge(rule(instance));
 
-        return result;
+            if (_asyncRules.Count > 0)
+            {
+                var tasks = _asyncRules.Select(rule => rule(instance, cancellationToken));
+                var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+                foreach (var partial in results)
+                    result.Merge(partial);
+            }
+
+            return result;
+        }
+        finally
+        {
+            _currentCancellationToken.Value = previousToken;
+        }
     }
 
     internal static string GetPropertyName(Expression expression)

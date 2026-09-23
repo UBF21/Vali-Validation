@@ -77,8 +77,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     }
 
     public IRuleBuilder<T, TProperty> WhenAsync(Func<T, CancellationToken, Task<bool>> condition)
-        => When(instance => Task.Run(() => condition(instance, CancellationToken.None)).GetAwaiter().GetResult());
+        => When(instance => Task.Run(() => condition(instance, _validator.CurrentCancellationToken)).GetAwaiter().GetResult());
 
     public IRuleBuilder<T, TProperty> UnlessAsync(Func<T, CancellationToken, Task<bool>> condition)
-        => Unless(instance => Task.Run(() => condition(instance, CancellationToken.None)).GetAwaiter().GetResult());
+        => Unless(instance => Task.Run(() => condition(instance, _validator.CurrentCancellationToken)).GetAwaiter().GetResult());
 }
