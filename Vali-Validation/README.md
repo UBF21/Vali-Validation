@@ -225,6 +225,78 @@ different, earlier synchronous rule in the same chain if one exists).
   result.Failures.Where(f => f.PropertyName == "Email").Select(f => f.Message);
   ```
 
+## Localization
+
+Built-in rule messages are available in English (default) and Spanish out of the box, resolved
+automatically from `CultureInfo.CurrentUICulture` — no configuration needed in an ASP.NET Core
+app with standard request localization.
+
+```csharp
+// Automatic: resolves from CultureInfo.CurrentUICulture
+var result = validator.Validate(dto);
+
+// Explicit override for one call
+var result = validator.Validate(dto, opts => opts.WithLanguage("es"));
+
+// App-wide default (used when CurrentUICulture has no catalog entry)
+ValiValidationOptions.Global.DefaultLanguage = "es";
+```
+
+Add your own language by registering a catalog at startup — a partial catalog is fine, any
+missing key falls back to English:
+
+```csharp
+LanguageManager.RegisterLanguage("pt", new Dictionary<MessageKey, string>
+{
+    [MessageKey.NotEmpty] = "O campo {PropertyName} não pode estar vazio.",
+    // ... remaining keys fall back to English until added
+});
+```
+
+**Known limitation:** nested validators attached via `SetValidator` do not inherit an outer call's
+*explicit* `.WithLanguage(...)` override — each resolves independently from `CultureInfo.CurrentUICulture`,
+which is already consistent across nesting without any forwarding needed for the common case.
+
+## Global Configuration
+
+`ValiValidationOptions.Global` configures app-wide defaults — set once at startup, before any
+concurrent validation runs:
+
+```csharp
+ValiValidationOptions.Global.DefaultCascadeMode = CascadeMode.StopOnFirstFailure;
+ValiValidationOptions.Global.DefaultLanguage = "es";
+ValiValidationOptions.Global.DisplayNameResolver = name => name; // e.g. PascalCase → "Display Name"
+ValiValidationOptions.Global.PropertyNameResolver = name => name; // e.g. PascalCase → snake_case
+```
+
+- `DefaultCascadeMode`: applies to validators that don't override `GlobalCascadeMode` themselves.
+- `DisplayNameResolver`: transforms the text shown in `{PropertyName}` inside messages — does NOT
+  change the key used in `ValidationResult.Errors`.
+- `PropertyNameResolver`: transforms the actual key used in `ValidationResult.Errors`/`Failures`.
+
+## Reusable Custom Rules
+
+For a custom rule you want to unit-test in isolation or share across validators, implement
+`IPropertyValidator<TProperty>` (or extend the `PropertyValidator<TProperty>` convenience base)
+instead of an inline `.Must(...)` predicate:
+
+```csharp
+public class EvenNumberValidator : IPropertyValidator<int>
+{
+    public bool IsValid(int value) => value % 2 == 0;
+    public IReadOnlyDictionary<string, string> Messages { get; } = new Dictionary<string, string>
+    {
+        ["en"] = "The {PropertyName} field must be an even number.",
+        ["es"] = "El campo {PropertyName} debe ser un número par."
+    };
+}
+
+RuleFor(x => x.Age).SetPropertyValidator(new EvenNumberValidator());
+```
+
+`.SetPropertyValidator(...)` integrates like every other rule — `.WithSeverity(...)`,
+`.WithErrorCode(...)`, `.When(...)`, `.Unless(...)`, and `.WithMessage(...)` all work on it.
+
 ## CascadeMode
 
 Stop validation after the first property failure across all properties:
