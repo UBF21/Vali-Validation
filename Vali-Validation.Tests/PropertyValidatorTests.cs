@@ -154,6 +154,23 @@ public class PropertyValidatorTests
         Assert.Throws<ArgumentNullException>(() => new NullValidatorHarness());
     }
 
+    [Fact]
+    public void SetPropertyValidator_SameInstanceReused_ReResolvesLanguagePerValidateCall()
+    {
+        // Regression test: a Singleton/reused validator instance must re-resolve the custom
+        // validator's message against WHICHEVER language override is active on EACH Validate()
+        // call — not the language that happened to be active when SetPropertyValidator was first
+        // invoked (rule-registration time, i.e. the AbstractValidator's constructor).
+        var validator = new EvenAgeValidator();
+        var dto = new PropertyValidatorDto { Age = 3 };
+
+        var spanishResult = validator.Validate(dto, opts => opts.WithLanguage("es"));
+        Assert.Equal("El campo Age debe ser un número par (validador custom).", spanishResult.Errors["Age"][0]);
+
+        var englishResult = validator.Validate(dto, opts => opts.WithLanguage("en"));
+        Assert.Equal("The Age field must be an even number (custom validator).", englishResult.Errors["Age"][0]);
+    }
+
     private class NullValidatorHarness : AbstractValidator<PropertyValidatorDto>
     {
         public NullValidatorHarness() => RuleFor(x => x.Age).SetPropertyValidator(null!);

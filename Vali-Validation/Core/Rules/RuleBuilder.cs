@@ -329,11 +329,7 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
         if (validator == null) throw new ArgumentNullException(nameof(validator));
 
         _currentCondition = validator.IsValid;
-        string language = _validator.ActiveLanguage;
-        string defaultText = validator.Messages.TryGetValue(language, out var text)
-            ? text
-            : validator.Messages.Values.First();
-        _currentMessageSpec = MessageSpec.Raw(defaultText);
+        _currentMessageSpec = MessageSpec.FromDictionary(validator.Messages);
         AddCurrentCondition();
         return this;
     }
