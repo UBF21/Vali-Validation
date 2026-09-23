@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Vali_Validation.Core.Localization;
 using Vali_Validation.Core.Results;
 using Vali_Validation.Core.Validators;
 
@@ -9,7 +10,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Must(Func<TProperty, bool>? predicate)
     {
         _currentCondition = predicate ?? (_ => true);
-        _currentMessage = $"The {_propertyName} field does not meet the specified condition.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Must);
         AddCurrentCondition();
         return this;
     }
@@ -17,7 +18,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> EqualTo(TProperty other)
     {
         _currentCondition = value => Equals(value, other);
-        _currentMessage = $"The {_propertyName} field must be equal to '{other}'.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.EqualTo,
+            new Dictionary<string, object> { ["other"] = other! });
         AddCurrentCondition();
         return this;
     }
@@ -25,7 +27,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> NotEqual(TProperty other)
     {
         _currentCondition = value => !Equals(value, other);
-        _currentMessage = $"The {_propertyName} field must not be equal to '{other}'.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NotEqual,
+            new Dictionary<string, object> { ["other"] = other! });
         AddCurrentCondition();
         return this;
     }
@@ -33,7 +36,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> GreaterThan(IComparable threshold)
     {
         _currentCondition = value => (value as IComparable)?.CompareTo(threshold) > 0;
-        _currentMessage = $"The {_propertyName} field must be greater than {threshold}.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.GreaterThan,
+            new Dictionary<string, object> { ["threshold"] = threshold });
         AddCurrentCondition();
         return this;
     }
@@ -41,7 +45,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> LessThan(IComparable threshold)
     {
         _currentCondition = value => (value as IComparable)?.CompareTo(threshold) < 0;
-        _currentMessage = $"The {_propertyName} field must be less than {threshold}.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.LessThan,
+            new Dictionary<string, object> { ["threshold"] = threshold });
         AddCurrentCondition();
         return this;
     }
@@ -49,7 +54,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> GreaterThanOrEqualTo(IComparable threshold)
     {
         _currentCondition = value => (value as IComparable)?.CompareTo(threshold) >= 0;
-        _currentMessage = $"The {_propertyName} field must be greater than or equal to {threshold}.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.GreaterThanOrEqualTo,
+            new Dictionary<string, object> { ["threshold"] = threshold });
         AddCurrentCondition();
         return this;
     }
@@ -57,7 +63,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> LessThanOrEqualTo(IComparable threshold)
     {
         _currentCondition = value => (value as IComparable)?.CompareTo(threshold) <= 0;
-        _currentMessage = $"The {_propertyName} field must be less than or equal to {threshold}.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.LessThanOrEqualTo,
+            new Dictionary<string, object> { ["threshold"] = threshold });
         AddCurrentCondition();
         return this;
     }
@@ -69,7 +76,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
             value is TComparable comparable &&
             comparable.CompareTo(min) >= 0 &&
             comparable.CompareTo(max) <= 0;
-        _currentMessage = $"The {_propertyName} field must be between {min} and {max}.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Between,
+            new Dictionary<string, object> { ["min"] = min!, ["max"] = max! });
         AddCurrentCondition();
         return this;
     }
@@ -81,7 +89,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
             value is TComparable comparable &&
             comparable.CompareTo(min) > 0 &&
             comparable.CompareTo(max) < 0;
-        _currentMessage = $"The {_propertyName} field must be exclusively between {min} and {max}.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.ExclusiveBetween,
+            new Dictionary<string, object> { ["min"] = min!, ["max"] = max! });
         AddCurrentCondition();
         return this;
     }
@@ -93,7 +102,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
             int? len = value?.ToString()?.Length;
             return len.HasValue && len.Value >= min && len.Value <= max;
         };
-        _currentMessage = $"The {_propertyName} field must be between {min} and {max} characters long.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.LengthBetween,
+            new Dictionary<string, object> { ["min"] = min, ["max"] = max });
         AddCurrentCondition();
         return this;
     }
@@ -101,7 +111,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> NotNull()
     {
         _currentCondition = value => value != null;
-        _currentMessage = $"The {_propertyName} field cannot be null.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NotNull);
         AddCurrentCondition();
         return this;
     }
@@ -109,7 +119,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Null()
     {
         _currentCondition = value => value == null;
-        _currentMessage = $"The {_propertyName} field must be null.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Null);
         AddCurrentCondition();
         return this;
     }
@@ -117,7 +127,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Empty()
     {
         _currentCondition = value => string.IsNullOrEmpty(value?.ToString());
-        _currentMessage = $"The {_propertyName} field must be empty.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Empty);
         AddCurrentCondition();
         return this;
     }
@@ -126,14 +136,15 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
-        string message = $"The {_propertyName} field must equal {otherName}.";
+        MessageSpec spec = MessageSpec.Localized(MessageKey.EqualToProperty,
+            new Dictionary<string, object> { ["otherName"] = otherName });
         AddSyncRule(instance =>
         {
             var result = new ValidationResult();
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             TProperty otherValue = otherFunc(instance);
             if (!Equals(value, otherValue))
-                result.AddError(_effectivePropertyName, message);
+                result.AddError(_effectivePropertyName, ResolveMessage(spec, _effectivePropertyName, null));
             return result;
         });
         return this;
@@ -143,13 +154,14 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
-        string message = $"The {_propertyName} field must be greater than {otherName}.";
+        MessageSpec spec = MessageSpec.Localized(MessageKey.GreaterThanProperty,
+            new Dictionary<string, object> { ["otherName"] = otherName });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             TProperty other = otherFunc(instance);
             return (value as IComparable)?.CompareTo(other) > 0;
-        }, message);
+        }, spec);
         return this;
     }
 
@@ -157,14 +169,15 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
-        string message = $"The {_propertyName} field must be greater than or equal to {otherName}.";
+        MessageSpec spec = MessageSpec.Localized(MessageKey.GreaterThanOrEqualToProperty,
+            new Dictionary<string, object> { ["otherName"] = otherName });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             TProperty other = otherFunc(instance);
             int cmp = (value as IComparable)?.CompareTo(other) ?? -1;
             return cmp >= 0;
-        }, message);
+        }, spec);
         return this;
     }
 
@@ -172,13 +185,14 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
-        string message = $"The {_propertyName} field must be less than {otherName}.";
+        MessageSpec spec = MessageSpec.Localized(MessageKey.LessThanProperty,
+            new Dictionary<string, object> { ["otherName"] = otherName });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             TProperty other = otherFunc(instance);
             return (value as IComparable)?.CompareTo(other) < 0;
-        }, message);
+        }, spec);
         return this;
     }
 
@@ -186,14 +200,15 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
-        string message = $"The {_propertyName} field must be less than or equal to {otherName}.";
+        MessageSpec spec = MessageSpec.Localized(MessageKey.LessThanOrEqualToProperty,
+            new Dictionary<string, object> { ["otherName"] = otherName });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             TProperty other = otherFunc(instance);
             int cmp = (value as IComparable)?.CompareTo(other) ?? 1;
             return cmp <= 0;
-        }, message);
+        }, spec);
         return this;
     }
 
@@ -201,25 +216,26 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         var otherName = AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
-        string message = $"The {_propertyName} field must not be equal to {otherName}.";
+        MessageSpec spec = MessageSpec.Localized(MessageKey.NotEqualToProperty,
+            new Dictionary<string, object> { ["otherName"] = otherName });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             TProperty other = otherFunc(instance);
             return !Equals(value, other);
-        }, message);
+        }, spec);
         return this;
     }
 
     public IRuleBuilder<T, TProperty> RequiredIf(Func<T, bool> condition)
     {
-        string message = $"The {_propertyName} field is required.";
+        MessageSpec spec = MessageSpec.Localized(MessageKey.RequiredIf);
         AddInstanceCondition(instance =>
         {
             if (!condition(instance)) return true;
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             return value != null && !string.IsNullOrWhiteSpace(value.ToString());
-        }, message);
+        }, spec);
         return this;
     }
 

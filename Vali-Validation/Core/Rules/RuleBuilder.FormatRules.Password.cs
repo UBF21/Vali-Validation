@@ -1,3 +1,4 @@
+using Vali_Validation.Core.Localization;
 using Vali_Validation.Core.Utils;
 
 namespace Vali_Validation.Core.Rules;
@@ -22,7 +23,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             }
             catch { return false; }
         };
-        _currentMessage = $"The {_propertyName} field must be a valid JSON string.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.IsValidJson);
         AddCurrentCondition();
         return this;
     }
@@ -36,7 +37,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             var buffer = new byte[(str.Length / 4 + 1) * 3];
             return Convert.TryFromBase64String(str, buffer, out _);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid Base64 encoded string.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.IsValidBase64);
         AddCurrentCondition();
         return this;
     }
@@ -51,7 +52,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             if (iban.Length < 15 || iban.Length > 34) return false;
             return IsValidIbanChecksum(iban);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid IBAN.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Iban);
         AddCurrentCondition();
         return this;
     }
@@ -89,7 +90,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> HasUppercase()
     {
         _currentCondition = value => { var s = value?.ToString(); return s != null && RegularExpressions.HasUppercaseLetter(s); };
-        _currentMessage = $"The {_propertyName} field must contain at least one uppercase letter.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.HasUppercase);
         AddCurrentCondition();
         return this;
     }
@@ -97,7 +98,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> HasLowercase()
     {
         _currentCondition = value => { var s = value?.ToString(); return s != null && RegularExpressions.HasLowercaseLetter(s); };
-        _currentMessage = $"The {_propertyName} field must contain at least one lowercase letter.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.HasLowercase);
         AddCurrentCondition();
         return this;
     }
@@ -105,7 +106,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> HasDigit()
     {
         _currentCondition = value => { var s = value?.ToString(); return s != null && RegularExpressions.HasDigitChar(s); };
-        _currentMessage = $"The {_propertyName} field must contain at least one digit.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.HasDigit);
         AddCurrentCondition();
         return this;
     }
@@ -113,7 +114,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> HasSpecialChar()
     {
         _currentCondition = value => { var s = value?.ToString(); return s != null && RegularExpressions.HasSpecialCharacter(s); };
-        _currentMessage = $"The {_propertyName} field must contain at least one special character.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.HasSpecialChar);
         AddCurrentCondition();
         return this;
     }
@@ -135,7 +136,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidSlug(str);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid URL slug (lowercase letters, numbers, and hyphens only).";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Slug);
         AddCurrentCondition();
         return this;
     }
@@ -147,7 +148,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return str != null && RegularExpressions.HasNoHtmlTags(str);
         };
-        _currentMessage = $"The {_propertyName} field must not contain HTML tags.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NoHtmlTags);
         AddCurrentCondition();
         return this;
     }
@@ -159,7 +160,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return str != null && RegularExpressions.HasNoSqlInjection(str);
         };
-        _currentMessage = $"The {_propertyName} field contains potentially unsafe content.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NoSqlInjectionPatterns);
         AddCurrentCondition();
         return this;
     }

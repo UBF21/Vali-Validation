@@ -1,4 +1,5 @@
 using System.Globalization;
+using Vali_Validation.Core.Localization;
 
 namespace Vali_Validation.Core.Rules;
 
@@ -7,7 +8,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Positive()
     {
         _currentCondition = value => NumericConversion.TryToDecimal(value, out var d) && d > 0;
-        _currentMessage = $"The {_propertyName} field must be a positive number.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Positive);
         AddCurrentCondition();
         return this;
     }
@@ -15,7 +16,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Negative()
     {
         _currentCondition = value => NumericConversion.TryToDecimal(value, out var d) && d < 0;
-        _currentMessage = $"The {_propertyName} field must be a negative number.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Negative);
         AddCurrentCondition();
         return this;
     }
@@ -23,7 +24,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> NotZero()
     {
         _currentCondition = value => value is IComparable comparable && comparable.CompareTo(0) != 0;
-        _currentMessage = $"The {_propertyName} field must not be zero.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NotZero);
         AddCurrentCondition();
         return this;
     }
@@ -31,7 +32,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> NonNegative()
     {
         _currentCondition = value => NumericConversion.TryToDouble(value, out var d) && d >= 0;
-        _currentMessage = $"The {_propertyName} field must be non-negative (zero or greater).";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NonNegative);
         AddCurrentCondition();
         return this;
     }
@@ -39,7 +40,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Percentage()
     {
         _currentCondition = value => NumericConversion.TryToDouble(value, out var d) && d >= 0 && d <= 100;
-        _currentMessage = $"The {_propertyName} field must be a valid percentage between 0 and 100.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Percentage);
         AddCurrentCondition();
         return this;
     }
@@ -58,7 +59,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
             if (fracPart.Length > decimalPlaces) return false;
             return intPart.TrimStart('-').Length + fracPart.Length <= totalDigits;
         };
-        _currentMessage = $"The {_propertyName} field must have at most {totalDigits} total digits and {decimalPlaces} decimal places.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Precision,
+            new Dictionary<string, object> { ["totalDigits"] = totalDigits, ["decimalPlaces"] = decimalPlaces });
         AddCurrentCondition();
         return this;
     }
@@ -66,7 +68,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> MultipleOf(decimal factor)
     {
         _currentCondition = value => NumericConversion.TryToDecimal(value, out var d) && factor != 0 && d % factor == 0;
-        _currentMessage = $"The {_propertyName} field must be a multiple of {factor}.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MultipleOf,
+            new Dictionary<string, object> { ["factor"] = factor });
         AddCurrentCondition();
         return this;
     }
@@ -75,7 +78,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         var otherName = Validators.AbstractValidator<T>.GetPropertyName(otherExpression.Body);
         var otherFunc = otherExpression.Compile();
-        string message = $"The {_propertyName} field must be a multiple of {otherName}.";
+        MessageSpec spec = MessageSpec.Localized(MessageKey.MultipleOfProperty,
+            new Dictionary<string, object> { ["otherName"] = otherName });
         AddInstanceCondition(instance =>
         {
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
@@ -83,14 +87,14 @@ public partial class RuleBuilder<T, TProperty> where T : class
             if (!NumericConversion.TryToDecimal(value, out decimal dv)) return false;
             if (!NumericConversion.TryToDecimal(other, out decimal dOther)) return false;
             return dOther != 0 && dv % dOther == 0;
-        }, message);
+        }, spec);
         return this;
     }
 
     public IRuleBuilder<T, TProperty> Odd()
     {
         _currentCondition = value => NumericConversion.TryToInt64(value, out var l) && l % 2 != 0;
-        _currentMessage = $"The {_propertyName} field must be an odd number.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Odd);
         AddCurrentCondition();
         return this;
     }
@@ -98,7 +102,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Even()
     {
         _currentCondition = value => NumericConversion.TryToInt64(value, out var l) && l % 2 == 0;
-        _currentMessage = $"The {_propertyName} field must be an even number.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Even);
         AddCurrentCondition();
         return this;
     }
@@ -113,7 +117,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
             if (dotIndex < 0) return true;
             return str.Length - dotIndex - 1 <= decimalPlaces;
         };
-        _currentMessage = $"The {_propertyName} field must have at most {decimalPlaces} decimal places.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MaxDecimalPlaces,
+            new Dictionary<string, object> { ["decimalPlaces"] = decimalPlaces });
         AddCurrentCondition();
         return this;
     }

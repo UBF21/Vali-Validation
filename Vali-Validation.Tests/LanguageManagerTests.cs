@@ -1,10 +1,37 @@
 using Vali_Validation.Core.Localization;
+using Vali_Validation.Core.Localization.Catalogs;
 using Xunit;
 
 namespace Vali_Validation.Tests;
 
 public class LanguageManagerTests
 {
+    [Fact]
+    public void EnglishCatalog_ContainsEntryForEveryMessageKey()
+    {
+        foreach (MessageKey key in Enum.GetValues(typeof(MessageKey)))
+        {
+            Assert.True(EnglishCatalog.Messages.ContainsKey(key),
+                $"EnglishCatalog is missing an entry for MessageKey.{key}.");
+        }
+    }
+
+    [Fact]
+    public void RegisterLanguage_MutatingCallerDictionaryAfterRegistration_DoesNotAffectStoredCatalog()
+    {
+        var callerDictionary = new Dictionary<MessageKey, string>
+        {
+            [MessageKey.NotEmpty] = "zz-test original: {PropertyName}"
+        };
+        LanguageManager.RegisterLanguage("zz-test", callerDictionary);
+
+        // Mutate the caller's own dictionary after registration.
+        callerDictionary[MessageKey.NotEmpty] = "zz-test mutated: {PropertyName}";
+
+        string template = LanguageManager.GetTemplate(MessageKey.NotEmpty, "zz-test");
+        Assert.Equal("zz-test original: {PropertyName}", template);
+    }
+
     [Fact]
     public void GetTemplate_KnownKeyEnglish_ReturnsEnglishTemplate()
     {

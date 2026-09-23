@@ -29,4 +29,21 @@ public sealed class ValidationOptions
 
         return this;
     }
+
+    private string? _explicitLanguage;
+
+    internal string? ExplicitLanguage => _explicitLanguage;
+
+    /// <summary>
+    /// Overrides the language used to resolve built-in rule messages for this validation call,
+    /// taking precedence over <see cref="System.Globalization.CultureInfo.CurrentUICulture"/> and
+    /// any app-wide default. Pass a code registered via <see cref="Vali_Validation.Core.Localization.LanguageManager.RegisterLanguage"/>
+    /// (e.g. <c>"en"</c>, <c>"es"</c>) — an unregistered code falls back to English per-message, same
+    /// as an unregistered <see cref="System.Globalization.CultureInfo.CurrentUICulture"/> would.
+    /// </summary>
+    public ValidationOptions WithLanguage(string languageCode)
+    {
+        _explicitLanguage = languageCode;
+        return this;
+    }
 }

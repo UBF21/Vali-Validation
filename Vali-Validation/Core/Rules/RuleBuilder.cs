@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Linq.Expressions;
+using Vali_Validation.Core.Localization;
 using Vali_Validation.Core.Results;
 using Vali_Validation.Core.Validators;
 
@@ -13,12 +14,12 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     private readonly Func<T, TProperty>? _propertyFunc;
     private readonly Func<T, IEnumerable<TProperty>>? _collectionFunc;
 
-    private readonly List<(Func<TProperty, bool> condition, string message, Func<T, bool>? when, string? code, Severity severity)> _rules = new();
-    private readonly List<(Func<T, bool> instanceCondition, string message, Func<T, bool>? when)> _instanceRules = new();
+    private readonly List<(Func<TProperty, bool> condition, MessageSpec message, Func<T, bool>? when, string? code, Severity severity)> _rules = new();
+    private readonly List<(Func<T, bool> instanceCondition, MessageSpec message, Func<T, bool>? when)> _instanceRules = new();
     private readonly string _propertyName;
 
     private string _effectivePropertyName;
-    private string? _currentMessage;
+    private MessageSpec? _currentMessageSpec;
     private Func<TProperty, bool>? _currentCondition;
     private bool _isRuleAdded;
     private bool _stopOnFirstFailure;
@@ -111,17 +112,27 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     private void ApplyElementRules(T instance, TProperty element, string key, ValidationResult result)
     {
-        foreach (var (condition, message, when, code, severity) in _rules)
+        foreach (var (condition, messageSpec, when, code, severity) in _rules)
         {
             if (when != null && !when(instance)) continue;
             if (element == null || condition(element)) continue;
 
-            string resolved = message
-                .Replace("{PropertyName}", key)
-                .Replace("{PropertyValue}", FormatPropertyValue(element));
+            string resolved = ResolveMessage(messageSpec, key, element);
             result.AddFailure(key, resolved, severity, code);
             if (_stopOnFirstFailure) break;
         }
+    }
+
+    private string ResolveMessage(MessageSpec spec, string propertyNameForPlaceholder, object? valueForPlaceholder)
+    {
+        string template = spec.ResolveTemplate(_validator.ActiveLanguage);
+        string resolved = template
+            .Replace("{PropertyName}", propertyNameForPlaceholder)
+            .Replace("{PropertyValue}", FormatPropertyValue(valueForPlaceholder));
+        if (spec.Args != null)
+            foreach (var (argKey, argValue) in spec.Args)
+                resolved = resolved.Replace($"{{{argKey}}}", argValue?.ToString() ?? "");
+        return resolved;
     }
 
     // Single-value mode: apply property rules against the resolved value, then instance-level rules.
@@ -136,14 +147,12 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     private void ApplyPropertyRules(T instance, TProperty value, ValidationResult result)
     {
-        foreach (var (condition, message, when, code, severity) in _rules)
+        foreach (var (condition, messageSpec, when, code, severity) in _rules)
         {
             if (when != null && !when(instance)) continue;
             if (condition(value)) continue;
 
-            string resolved = message
-                .Replace("{PropertyName}", _effectivePropertyName)
-                .Replace("{PropertyValue}", FormatPropertyValue(value));
+            string resolved = ResolveMessage(messageSpec, _effectivePropertyName, value);
             result.AddFailure(_effectivePropertyName, resolved, severity, code);
             if (_stopOnFirstFailure) break;
         }
@@ -151,12 +160,17 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
 
     private void ApplyInstanceRules(T instance, ValidationResult result)
     {
-        foreach (var (instanceCondition, message, when) in _instanceRules)
+        foreach (var (instanceCondition, messageSpec, when) in _instanceRules)
         {
             if (when != null && !when(instance)) continue;
             if (instanceCondition(instance)) continue;
 
-            result.AddFailure(_effectivePropertyName, message, Severity.Error);
+            // IMPORTANT: pass _propertyName (not _effectivePropertyName) here — this preserves
+            // today's exact (pre-existing, unrelated-to-this-task) behavior where cross-property
+            // rules (GreaterThanProperty, EqualToProperty, etc.) resolve {PropertyName} from the
+            // value captured at RuleFor(...) time, not from any later OverridePropertyName() call.
+            string resolved = ResolveMessage(messageSpec, _propertyName, null);
+            result.AddFailure(_effectivePropertyName, resolved, Severity.Error);
             if (_stopOnFirstFailure) break;
         }
     }
@@ -165,16 +179,16 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
     {
         if (_currentCondition != null)
         {
-            string message = _currentMessage ?? $"The {_effectivePropertyName} field is invalid.";
-            _rules.Add((_currentCondition, message, _ambientCondition, null, Severity.Error));
+            MessageSpec spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.RuleBuilderDefault);
+            _rules.Add((_currentCondition, spec, _ambientCondition, null, Severity.Error));
             _currentCondition = null;
-            _currentMessage = null;
+            _currentMessageSpec = null;
         }
 
         EnsureRegistered();
     }
 
-    private void AddInstanceCondition(Func<T, bool> condition, string message)
+    private void AddInstanceCondition(Func<T, bool> condition, MessageSpec message)
     {
         _instanceRules.Add((condition, message, _ambientCondition));
         EnsureRegistered();
@@ -189,8 +203,11 @@ public partial class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty> wher
         if (_rules.Count > 0)
         {
             int last = _rules.Count - 1;
-            var (condition, _, when, code, severity) = _rules[last];
-            _rules[last] = (condition, message ?? $"The {_effectivePropertyName} field is invalid.", when, code, severity);
+            var (condition, existingSpec, when, code, severity) = _rules[last];
+            MessageSpec newSpec = message != null
+                ? MessageSpec.Raw(message, existingSpec.Args)
+                : MessageSpec.Localized(MessageKey.RuleBuilderDefault);
+            _rules[last] = (condition, newSpec, when, code, severity);
         }
         return this;
     }

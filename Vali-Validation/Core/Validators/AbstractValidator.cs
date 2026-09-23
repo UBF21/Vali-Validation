@@ -35,6 +35,24 @@ public abstract partial class AbstractValidator<T> : IValidator<T> where T : cla
     /// </summary>
     internal CancellationToken CurrentCancellationToken => _currentCancellationToken.Value;
 
+    private static readonly AsyncLocal<string?> _explicitLanguage = new();
+
+    /// <summary>
+    /// The language code ("en", "es", ...) used to resolve built-in rule messages for the
+    /// currently-executing validation call. Precedence: an explicit <c>ValidationOptions.WithLanguage(...)</c>
+    /// override for this call, then <see cref="System.Globalization.CultureInfo.CurrentUICulture"/>,
+    /// then <c>"en"</c>. <strong>Known limitation:</strong> nested validators attached via
+    /// <c>SetValidator</c> do NOT inherit an outer call's explicit <c>WithLanguage</c> override — each
+    /// resolves independently from <see cref="System.Globalization.CultureInfo.CurrentUICulture"/>,
+    /// which is thread-ambient and therefore already consistent across nesting without forwarding.
+    /// </summary>
+    internal string ActiveLanguage =>
+        _explicitLanguage.Value
+        ?? NormalizeLanguageCode(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)
+        ?? "en";
+
+    private static string? NormalizeLanguageCode(string? code) => string.IsNullOrEmpty(code) ? null : code;
+
     protected virtual CascadeMode GlobalCascadeMode => CascadeMode.Continue;
 
     /// <summary>

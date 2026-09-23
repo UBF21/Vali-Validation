@@ -24,16 +24,25 @@ public abstract partial class AbstractValidator<T> where T : class
         var options = new ValidationOptions();
         configureOptions(options);
 
-        var result = new ValidationResult();
-        if (!PreValidate(instance, result)) return result;
-
-        foreach (var rule in SyncRules)
+        var previousLanguage = _explicitLanguage.Value;
+        _explicitLanguage.Value = options.ExplicitLanguage;
+        try
         {
-            if (!MatchesFilter(_syncRuleSets, rule, options)) continue;
-            MergeResultInto(result, rule(instance));
-            if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) break;
+            var result = new ValidationResult();
+            if (!PreValidate(instance, result)) return result;
+
+            foreach (var rule in SyncRules)
+            {
+                if (!MatchesFilter(_syncRuleSets, rule, options)) continue;
+                MergeResultInto(result, rule(instance));
+                if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) break;
+            }
+            return result;
         }
-        return result;
+        finally
+        {
+            _explicitLanguage.Value = previousLanguage;
+        }
     }
 
     /// <summary>
@@ -49,22 +58,31 @@ public abstract partial class AbstractValidator<T> where T : class
         var options = new ValidationOptions();
         configureOptions(options);
 
-        var result = new ValidationResult();
-        if (!PreValidate(instance, result)) return result;
+        var previousLanguage = _explicitLanguage.Value;
+        _explicitLanguage.Value = options.ExplicitLanguage;
+        try
+        {
+            var result = new ValidationResult();
+            if (!PreValidate(instance, result)) return result;
 
-        foreach (var rule in SyncRules)
-        {
-            if (!MatchesFilter(_syncRuleSets, rule, options)) continue;
-            MergeResultInto(result, rule(instance));
-            if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
+            foreach (var rule in SyncRules)
+            {
+                if (!MatchesFilter(_syncRuleSets, rule, options)) continue;
+                MergeResultInto(result, rule(instance));
+                if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
+            }
+            foreach (var rule in AsyncRules)
+            {
+                if (!MatchesFilter(_asyncRuleSets, rule, options)) continue;
+                MergeResultInto(result, await rule(instance, cancellationToken).ConfigureAwait(false));
+                if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
+            }
+            return result;
         }
-        foreach (var rule in AsyncRules)
+        finally
         {
-            if (!MatchesFilter(_asyncRuleSets, rule, options)) continue;
-            MergeResultInto(result, await rule(instance, cancellationToken).ConfigureAwait(false));
-            if (GlobalCascadeMode == CascadeMode.StopOnFirstFailure && !result.IsValid) return result;
+            _explicitLanguage.Value = previousLanguage;
         }
-        return result;
     }
 
     private static bool MatchesFilter<TRule>(

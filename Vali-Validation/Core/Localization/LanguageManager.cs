@@ -26,7 +26,7 @@ public static class LanguageManager
     {
         if (languageCode == null) throw new ArgumentNullException(nameof(languageCode));
         if (messages == null) throw new ArgumentNullException(nameof(messages));
-        _catalogs[languageCode] = messages;
+        _catalogs[languageCode] = new Dictionary<MessageKey, string>(messages);
     }
 
     internal static string GetTemplate(MessageKey key, string languageCode)

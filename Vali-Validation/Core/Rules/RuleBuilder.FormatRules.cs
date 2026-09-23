@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using Vali_Validation.Core.Localization;
 using Vali_Validation.Core.Utils;
 
 namespace Vali_Validation.Core.Rules;
@@ -13,7 +14,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidEmail(str);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid email address.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Email);
         AddCurrentCondition();
         return this;
     }
@@ -26,7 +27,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             return Uri.TryCreate(str, UriKind.Absolute, out var uriResult)
                    && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid URL.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Url);
         AddCurrentCondition();
         return this;
     }
@@ -38,7 +39,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidAlpha(str);
         };
-        _currentMessage = $"The {_propertyName} field must only contain alphabetic characters.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.IsAlpha);
         AddCurrentCondition();
         return this;
     }
@@ -50,7 +51,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidAlphaNumeric(str);
         };
-        _currentMessage = $"The {_propertyName} field must only contain alphanumeric characters.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.IsAlphanumeric);
         AddCurrentCondition();
         return this;
     }
@@ -62,7 +63,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidNumber(str);
         };
-        _currentMessage = $"The {_propertyName} field must only contain numbers.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.IsNumeric);
         AddCurrentCondition();
         return this;
     }
@@ -70,7 +71,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> IsEnum<TEnum>() where TEnum : struct, Enum
     {
         _currentCondition = value => value != null && Enum.IsDefined(typeof(TEnum), value);
-        _currentMessage = $"The {_propertyName} field must be a valid {typeof(TEnum).Name} value.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.IsEnum,
+            new Dictionary<string, object> { ["enumType"] = typeof(TEnum).Name });
         AddCurrentCondition();
         return this;
     }
@@ -78,7 +80,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Guid()
     {
         _currentCondition = value => System.Guid.TryParse(value?.ToString(), out _);
-        _currentMessage = $"The {_propertyName} field must be a valid GUID.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Guid);
         AddCurrentCondition();
         return this;
     }
@@ -87,7 +89,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         _currentCondition = value =>
             value != null && System.Guid.TryParse(value.ToString(), out var guid) && guid != System.Guid.Empty;
-        _currentMessage = $"The {_propertyName} field must not be an empty GUID.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NotEmptyGuid);
         AddCurrentCondition();
         return this;
     }
@@ -99,7 +101,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidPhone(str);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid phone number.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.PhoneNumber);
         AddCurrentCondition();
         return this;
     }
@@ -111,7 +113,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidIPv4(str);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid IPv4 address.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.IPv4);
         AddCurrentCondition();
         return this;
     }
@@ -125,7 +127,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
                    IPAddress.TryParse(str, out var addr) &&
                    addr.AddressFamily == AddressFamily.InterNetworkV6;
         };
-        _currentMessage = $"The {_propertyName} field must be a valid IPv6 address.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.IPv6);
         AddCurrentCondition();
         return this;
     }
@@ -137,7 +139,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidMacAddress(str);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid MAC address.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MacAddress);
         AddCurrentCondition();
         return this;
     }
@@ -149,7 +151,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidCreditCard(str);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid credit card number.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.CreditCard);
         AddCurrentCondition();
         return this;
     }
@@ -157,7 +159,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Latitude()
     {
         _currentCondition = value => NumericConversion.TryToDouble(value, out var d) && d >= -90.0 && d <= 90.0;
-        _currentMessage = $"The {_propertyName} field must be a valid latitude (-90 to 90).";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Latitude);
         AddCurrentCondition();
         return this;
     }
@@ -165,7 +167,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Longitude()
     {
         _currentCondition = value => NumericConversion.TryToDouble(value, out var d) && d >= -180.0 && d <= 180.0;
-        _currentMessage = $"The {_propertyName} field must be a valid longitude (-180 to 180).";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Longitude);
         AddCurrentCondition();
         return this;
     }
@@ -177,7 +179,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidCountryCode(str);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid ISO 3166-1 alpha-2 country code (e.g. US, PE, ES).";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.CountryCode);
         AddCurrentCondition();
         return this;
     }
@@ -189,7 +191,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrWhiteSpace(str) && RegularExpressions.IsValidCurrencyCode(str);
         };
-        _currentMessage = $"The {_propertyName} field must be a valid ISO 4217 currency code (e.g. USD, EUR, PEN).";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.CurrencyCode);
         AddCurrentCondition();
         return this;
     }

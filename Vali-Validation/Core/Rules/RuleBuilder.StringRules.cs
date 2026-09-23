@@ -1,3 +1,4 @@
+using Vali_Validation.Core.Localization;
 using Vali_Validation.Core.Utils;
 
 namespace Vali_Validation.Core.Rules;
@@ -7,7 +8,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> NotEmpty()
     {
         _currentCondition = value => value != null && !string.IsNullOrWhiteSpace(value.ToString());
-        _currentMessage = $"The {_propertyName} field cannot be empty.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NotEmpty);
         AddCurrentCondition();
         return this;
     }
@@ -16,7 +17,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
         StringComparison comparison = StringComparison.OrdinalIgnoreCase)
     {
         _currentCondition = value => value?.ToString()?.Contains(substring, comparison) ?? false;
-        _currentMessage = $"The {_propertyName} field must contain '{substring}'.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MustContain,
+            new Dictionary<string, object> { ["substring"] = substring });
         AddCurrentCondition();
         return this;
     }
@@ -24,7 +26,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> MinimumLength(int length)
     {
         _currentCondition = value => value?.ToString()?.Length >= length;
-        _currentMessage = $"The {_propertyName} field must be at least {length} characters long.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MinimumLength,
+            new Dictionary<string, object> { ["length"] = length });
         AddCurrentCondition();
         return this;
     }
@@ -32,7 +35,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> MaximumLength(int length)
     {
         _currentCondition = value => value?.ToString()?.Length <= length;
-        _currentMessage = $"The {_propertyName} field must be no longer than {length} characters.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MaximumLength,
+            new Dictionary<string, object> { ["length"] = length });
         AddCurrentCondition();
         return this;
     }
@@ -52,7 +56,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
                 return false;
             }
         };
-        _currentMessage = $"The {_propertyName} field is not in the correct format.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Matches);
         AddCurrentCondition();
         return this;
     }
@@ -60,7 +64,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> StartsWith(string prefix)
     {
         _currentCondition = value => value?.ToString()?.StartsWith(prefix) ?? false;
-        _currentMessage = $"The {_propertyName} field must begin with '{prefix}'.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.StartsWith,
+            new Dictionary<string, object> { ["prefix"] = prefix });
         AddCurrentCondition();
         return this;
     }
@@ -68,7 +73,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> EndsWith(string suffix)
     {
         _currentCondition = value => value?.ToString()?.EndsWith(suffix) ?? false;
-        _currentMessage = $"The {_propertyName} field must end with '{suffix}'.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.EndsWith,
+            new Dictionary<string, object> { ["suffix"] = suffix });
         AddCurrentCondition();
         return this;
     }
@@ -78,7 +84,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         _currentCondition = value =>
             !(value?.ToString()?.Contains(substring, comparison) ?? false);
-        _currentMessage = $"The {_propertyName} field must not contain '{substring}'.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NotContains,
+            new Dictionary<string, object> { ["substring"] = substring });
         AddCurrentCondition();
         return this;
     }
@@ -90,7 +97,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             string? str = value?.ToString();
             return !string.IsNullOrEmpty(str) && RegularExpressions.HasNoWhitespace(str);
         };
-        _currentMessage = $"The {_propertyName} field must not contain whitespace.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NoWhitespace);
         AddCurrentCondition();
         return this;
     }
@@ -98,7 +105,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Lowercase()
     {
         _currentCondition = value => { var s = value?.ToString(); return s != null && s == s.ToLower(); };
-        _currentMessage = $"The {_propertyName} field must be all lowercase.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Lowercase);
         AddCurrentCondition();
         return this;
     }
@@ -106,7 +113,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> Uppercase()
     {
         _currentCondition = value => { var s = value?.ToString(); return s != null && s == s.ToUpper(); };
-        _currentMessage = $"The {_propertyName} field must be all uppercase.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Uppercase);
         AddCurrentCondition();
         return this;
     }
@@ -119,7 +126,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
             if (string.IsNullOrWhiteSpace(s)) return min == 0;
             return s.Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length >= min;
         };
-        _currentMessage = $"The {_propertyName} field must contain at least {min} words.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MinWords,
+            new Dictionary<string, object> { ["min"] = min });
         AddCurrentCondition();
         return this;
     }
@@ -132,7 +140,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
             if (string.IsNullOrWhiteSpace(s)) return true;
             return s.Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length <= max;
         };
-        _currentMessage = $"The {_propertyName} field must contain at most {max} words.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MaxWords,
+            new Dictionary<string, object> { ["max"] = max });
         AddCurrentCondition();
         return this;
     }

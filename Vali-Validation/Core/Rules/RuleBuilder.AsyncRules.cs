@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Vali_Validation.Core.Localization;
 using Vali_Validation.Core.Results;
 using Vali_Validation.Core.Validators;
 
@@ -10,15 +11,15 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         if (predicateAsync == null) throw new ArgumentNullException(nameof(predicateAsync));
 
-        string message = _currentMessage ?? $"The {_propertyName} field does not meet the specified condition.";
-        _currentMessage = null;
+        MessageSpec spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.MustAsync);
+        _currentMessageSpec = null;
 
         AddAsyncRule(async (instance, _) =>
         {
             var result = new ValidationResult();
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             bool isValid = await predicateAsync(value).ConfigureAwait(false);
-            if (!isValid) result.AddError(_effectivePropertyName, message);
+            if (!isValid) result.AddError(_effectivePropertyName, ResolveMessage(spec, _effectivePropertyName, value));
             return result;
         });
 
@@ -29,15 +30,15 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         if (predicateAsync == null) throw new ArgumentNullException(nameof(predicateAsync));
 
-        string message = _currentMessage ?? $"The {_propertyName} field does not meet the specified condition.";
-        _currentMessage = null;
+        MessageSpec spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.MustAsync);
+        _currentMessageSpec = null;
 
         AddAsyncRule(async (instance, ct) =>
         {
             var result = new ValidationResult();
             TProperty value = _propertyFunc != null ? _propertyFunc(instance) : default!;
             bool isValid = await predicateAsync(value, ct).ConfigureAwait(false);
-            if (!isValid) result.AddError(_effectivePropertyName, message);
+            if (!isValid) result.AddError(_effectivePropertyName, ResolveMessage(spec, _effectivePropertyName, value));
             return result;
         });
 
@@ -59,8 +60,9 @@ public partial class RuleBuilder<T, TProperty> where T : class
         var dependentPropertyName = AbstractValidator<T>.GetPropertyName(dependentPropertyExpression.Body);
         var dependentFunc = dependentPropertyExpression.Compile();
 
-        string message = _currentMessage ?? $"The field {propertyName} does not meet the dependent condition of {dependentPropertyName}.";
-        _currentMessage = null;
+        MessageSpec spec = _currentMessageSpec ?? MessageSpec.Localized(MessageKey.DependentRuleAsync,
+            new Dictionary<string, object> { ["dependentPropertyName"] = dependentPropertyName });
+        _currentMessageSpec = null;
 
         AddAsyncRule(async (instance, _) =>
         {
@@ -69,7 +71,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             TDependent dependentValue = dependentFunc(instance);
 
             bool isValid = await predicateAsync(value, dependentValue).ConfigureAwait(false);
-            if (!isValid) result.AddError(propertyName, message);
+            if (!isValid) result.AddError(propertyName, ResolveMessage(spec, propertyName, value));
             return result;
         });
 

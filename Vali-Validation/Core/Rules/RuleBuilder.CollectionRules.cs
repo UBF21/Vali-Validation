@@ -1,3 +1,5 @@
+using Vali_Validation.Core.Localization;
+
 namespace Vali_Validation.Core.Rules;
 
 public partial class RuleBuilder<T, TProperty> where T : class
@@ -7,7 +9,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
         _currentCondition = value =>
             value is System.Collections.IEnumerable enumerable &&
             enumerable.Cast<object>().Count() == count;
-        _currentMessage = $"The {_propertyName} field must contain exactly {count} items.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.HasCount,
+            new Dictionary<string, object> { ["count"] = count });
         AddCurrentCondition();
         return this;
     }
@@ -17,7 +20,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
         _currentCondition = value =>
             value is System.Collections.IEnumerable enumerable &&
             enumerable.Cast<object>().Any();
-        _currentMessage = $"The {_propertyName} field must not be an empty collection.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NotEmptyCollection);
         AddCurrentCondition();
         return this;
     }
@@ -25,7 +28,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> MinCount(int min)
     {
         _currentCondition = value => value is System.Collections.IEnumerable e && e.Cast<object>().Count() >= min;
-        _currentMessage = $"The {_propertyName} field must contain at least {min} items.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MinCount,
+            new Dictionary<string, object> { ["min"] = min });
         AddCurrentCondition();
         return this;
     }
@@ -33,7 +37,8 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> MaxCount(int max)
     {
         _currentCondition = value => value is System.Collections.IEnumerable e && e.Cast<object>().Count() <= max;
-        _currentMessage = $"The {_propertyName} field must contain at most {max} items.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.MaxCount,
+            new Dictionary<string, object> { ["max"] = max });
         AddCurrentCondition();
         return this;
     }
@@ -46,7 +51,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
             var items = e.Cast<object>().ToList();
             return items.Count == items.Distinct().Count();
         };
-        _currentMessage = $"The {_propertyName} field must not contain duplicate values.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.Unique);
         AddCurrentCondition();
         return this;
     }
@@ -54,7 +59,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> AllSatisfy(Func<object, bool> predicate)
     {
         _currentCondition = value => value is System.Collections.IEnumerable e && e.Cast<object>().All(predicate);
-        _currentMessage = $"The {_propertyName} field: all items must satisfy the condition.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.AllSatisfy);
         AddCurrentCondition();
         return this;
     }
@@ -62,7 +67,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> AnySatisfy(Func<object, bool> predicate)
     {
         _currentCondition = value => value is System.Collections.IEnumerable e && e.Cast<object>().Any(predicate);
-        _currentMessage = $"The {_propertyName} field: at least one item must satisfy the condition.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.AnySatisfy);
         AddCurrentCondition();
         return this;
     }
@@ -70,7 +75,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     public IRuleBuilder<T, TProperty> In(IEnumerable<TProperty> values)
     {
         _currentCondition = values.Contains;
-        _currentMessage = $"The {_propertyName} field must be in the list of allowed values.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.In);
         AddCurrentCondition();
         return this;
     }
@@ -79,7 +84,7 @@ public partial class RuleBuilder<T, TProperty> where T : class
     {
         var list = values.ToList();
         _currentCondition = value => !list.Contains(value);
-        _currentMessage = $"The {_propertyName} field must not be in the list of disallowed values.";
+        _currentMessageSpec = MessageSpec.Localized(MessageKey.NotIn);
         AddCurrentCondition();
         return this;
     }
