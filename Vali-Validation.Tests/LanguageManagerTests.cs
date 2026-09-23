@@ -17,6 +17,16 @@ public class LanguageManagerTests
     }
 
     [Fact]
+    public void SpanishCatalog_ContainsEntryForEveryMessageKey()
+    {
+        foreach (MessageKey key in Enum.GetValues(typeof(MessageKey)))
+        {
+            Assert.True(SpanishCatalog.Messages.ContainsKey(key),
+                $"SpanishCatalog is missing an entry for MessageKey.{key}.");
+        }
+    }
+
+    [Fact]
     public void RegisterLanguage_MutatingCallerDictionaryAfterRegistration_DoesNotAffectStoredCatalog()
     {
         var callerDictionary = new Dictionary<MessageKey, string>
