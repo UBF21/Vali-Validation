@@ -37,9 +37,21 @@ public partial class RuleBuilder<T, TProperty> where T : class
         return this;
     }
 
+    private static readonly TimeSpan MatchesTimeout = TimeSpan.FromMilliseconds(250);
+
     public IRuleBuilder<T, TProperty> Matches(string pattern)
     {
-        _currentCondition = value => System.Text.RegularExpressions.Regex.IsMatch(value?.ToString() ?? "", pattern);
+        _currentCondition = value =>
+        {
+            try
+            {
+                return System.Text.RegularExpressions.Regex.IsMatch(value?.ToString() ?? "", pattern, System.Text.RegularExpressions.RegexOptions.None, MatchesTimeout);
+            }
+            catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+            {
+                return false;
+            }
+        };
         _currentMessage = $"The {_propertyName} field is not in the correct format.";
         AddCurrentCondition();
         return this;
