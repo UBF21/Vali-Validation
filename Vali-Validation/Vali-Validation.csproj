@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
+        <TargetFrameworks>net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
         <RootNamespace>Vali_Validation</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
@@ -36,7 +36,7 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>
-            Lightweight, zero-dependency fluent validation library for .NET 7/8/9.
+            Lightweight, zero-dependency fluent validation library for .NET 7/8/9/10.
             Alternative to FluentValidation with async support, conditional rules (When/Unless),
             cascade mode, nested object validation, collection validation (RuleForEach),
             and seamless DI registration — all without external dependencies beyond
