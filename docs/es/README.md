@@ -1,6 +1,6 @@
 # Documentación de Vali-Validation (Español)
 
-Bienvenido a la documentación en español de **Vali-Validation**, la biblioteca de validación fluent para .NET 7/8/9 del ecosistema Vali.
+Bienvenido a la documentación en español de **Vali-Validation**, la biblioteca de validación fluent para .NET 7/8/9/10 del ecosistema Vali.
 
 ---
 
@@ -47,6 +47,16 @@ Bienvenido a la documentación en español de **Vali-Validation**, la biblioteca
 | 15 | [Patrones avanzados](15-patrones-avanzados.md) | Validadores anidados con `SetValidator`, `Include` para herencia, validación condicional compleja con `RuleSwitch`/`SwitchOn`, passwords, colecciones anidadas, extensiones de `IRuleBuilder`, combinación de nuevas reglas en escenarios reales |
 | 16 | [Switch / Case](16-switch-case.md) | Referencia completa de `RuleSwitch` y `SwitchOn`: sintaxis, 12+ ejemplos reales (e-commerce, multi-tenant, préstamos, notificaciones, mediciones científicas), árbol de decisión, tests xUnit, antipatrones |
 
+### Configuración avanzada
+
+| # | Documento | Descripción |
+|---|---|---|
+| 17 | [Severidad](17-severidad.md) | `Severity.Warning`/`Info` vs `Error`, `.WithSeverity()`, `ValidationResult.Failures` como fuente de verdad, migración desde el modelo v2.x basado solo en `Errors` |
+| 18 | [Conjuntos de reglas](18-conjuntos-de-reglas.md) | `.InRuleSet()`, `ValidationOptions.IncludeRuleSets`, ejecutar un subconjunto de reglas para una llamada de validación |
+| 19 | [Localización](19-localizacion.md) | Catálogos de mensajes incorporados en inglés/español, orden de precedencia de resolución de idioma, registrar un nuevo idioma con `LanguageManager` |
+| 20 | [Configuración global](20-configuracion-global.md) | `ValiValidationOptions.Global`: `DefaultCascadeMode`, `DefaultLanguage`, `DisplayNameResolver`, `PropertyNameResolver` |
+| 21 | [Validadores de propiedad](21-validadores-de-propiedad.md) | `IPropertyValidator<TProperty>`, `PropertyValidator<TProperty>`, `.SetPropertyValidator()` — reglas personalizadas reutilizables y probables de forma independiente |
+
 ---
 
 ## Guía de lectura rápida
@@ -80,6 +90,18 @@ Bienvenido a la documentación en español de **Vali-Validation**, la biblioteca
 3. [Validadores](04-validadores.md) — `RuleSwitch` para validación condicional por casos sobre múltiples propiedades
 4. [Patrones avanzados](15-patrones-avanzados.md) — composición, herencia, colecciones anidadas, validación polimórfica
 
+### Necesito manejo de errores personalizado con severidades
+
+1. [Severidad](17-severidad.md) — marca reglas como `Warning`/`Info` para que no bloqueen `IsValid`
+2. [Resultado de validación](09-resultado-validacion.md) — `ValidationResult.Failures`, la fuente de verdad consciente de severidad
+3. [Conjuntos de reglas](18-conjuntos-de-reglas.md) — restringe qué reglas se ejecutan siquiera para una llamada dada
+
+### Necesito mensajes de error en varios idiomas
+
+1. [Localización](19-localizacion.md) — catálogos incorporados en inglés/español, orden de resolución de idioma
+2. [Configuración global](20-configuracion-global.md) — `ValiValidationOptions.Global.DefaultLanguage`
+3. [Validadores de propiedad](21-validadores-de-propiedad.md) — `Messages` por idioma en reglas personalizadas
+
 ---
 
 ## Referencia rápida de reglas
@@ -99,7 +121,7 @@ Bienvenido a la documentación en español de **Vali-Validation**, la biblioteca
 | Password | `HasUppercase`, `HasLowercase`, `HasDigit`, `HasSpecialChar`, `PasswordPolicy` |
 | Fechas | `FutureDate`, `PastDate`, `Today`, `MinAge`, `MaxAge`, `DateBetween`, `NotExpired`, `WithinNext`, `WithinLast`, `IsWeekday`, `IsWeekend` |
 | Colecciones | `NotEmptyCollection`, `HasCount`, `MinCount`, `MaxCount`, `Unique`, `AllSatisfy`, `AnySatisfy`, `In`, `NotIn` |
-| Personalizadas | `Must`, `MustAsync`, `DependentRuleAsync`, `Custom`, `Transform`, `SetValidator` |
+| Personalizadas | `Must`, `MustAsync`, `DependentRuleAsync`, `Custom`, `Transform`, `SetValidator`, `InjectValidator`, `SetPropertyValidator` |
 | Validación por casos | `RuleSwitch` (múltiples propiedades según discriminador), `SwitchOn` (una propiedad con reglas distintas por valor) |
 
 ### Modificadores disponibles
@@ -108,12 +130,16 @@ Bienvenido a la documentación en español de **Vali-Validation**, la biblioteca
 |---|---|
 | `.WithMessage(msg)` | Reemplaza el mensaje de la última regla |
 | `.WithErrorCode(code)` | Agrega código a `ErrorCodes` para la última regla |
+| `.WithSeverity(severity)` | Marca la última regla como `Warning`/`Info` en vez del `Error` por defecto — ver [Severidad](17-severidad.md) |
 | `.OverridePropertyName(name)` | Cambia la clave en `Errors` para todo el builder |
+| `.InRuleSet(names)` | Etiqueta la(s) regla(s) del builder para que se ejecuten solo en llamadas `IncludeRuleSets` coincidentes — ver [Conjuntos de reglas](18-conjuntos-de-reglas.md) |
 | `.StopOnFirstFailure()` | Detiene la evaluación de la propiedad al primer fallo |
 | `.When(condition)` | Aplica las reglas solo si la condición es verdadera |
 | `.Unless(condition)` | Aplica las reglas solo si la condición es falsa |
 | `.WhenAsync(condition)` | `When` con condición asíncrona |
 | `.UnlessAsync(condition)` | `Unless` con condición asíncrona |
+
+> `AbstractValidator<T>` también expone un `When(condition, ruleBlock)`/`Unless(condition, ruleBlock)` a nivel de bloque para envolver varias llamadas a `RuleFor` bajo una condición compartida — ver [Modificadores — Condiciones a nivel de bloque](07-modificadores.md#condiciones-a-nivel-de-bloque).
 
 ---
 

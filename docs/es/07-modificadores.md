@@ -407,6 +407,8 @@ RuleFor(x => x.NewEmail)
 
 > **Nota:** `WhenAsync` solo funciona cuando se llama a `ValidateAsync`. Si se llama a `Validate` (síncrono), las reglas con `WhenAsync` se saltan.
 
+> **Modificadores sobre `MustAsync`/`DependentRuleAsync`:** `.WithMessage()`, `.WithErrorCode()`, `.When()` y `.Unless()` encadenados directamente después de `MustAsync` o `DependentRuleAsync` se aplican correctamente a esa regla asíncrona, exactamente igual que después de cualquier regla síncrona. (`.WithSeverity()` es la única excepción — consulta [Severidad](17-severidad.md#dónde-severity-no-aplica) para entender por qué nunca afecta a una regla asíncrona.)
+
 ### Ejemplo: permisos condicionales
 
 ```csharp
@@ -456,6 +458,74 @@ RuleFor(x => x.Price)
         return await _catalogs.IsFreeAsync(request.CatalogId, ct);
     });
 ```
+
+---
+
+## Condiciones a nivel de bloque
+
+Todo lo anterior es el `.When()`/`.Unless()` **por regla** — encadenado sobre un builder de `RuleFor` específico, aplicando a las reglas definidas en esa cadena. `AbstractValidator<T>` también expone un `When`/`Unless` **a nivel de bloque**, un overload distinto con un propósito distinto: envolver varias llamadas a `RuleFor`/`RuleForEach` en el constructor para que todas compartan una condición, sin repetir `.When(...)` en cada una.
+
+```csharp
+protected void When(Func<T, bool> condition, Action ruleBlock)
+protected void Unless(Func<T, bool> condition, Action ruleBlock)
+```
+
+```csharp
+public class CreateListingValidator : AbstractValidator<CreateListingRequest>
+{
+    public CreateListingValidator()
+    {
+        RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Price).GreaterThan(0);
+
+        // Cada RuleFor/RuleForEach dentro de este bloque está condicionado por ListingType == Auction —
+        // equivalente a llamar .When(x => x.ListingType == ListingType.Auction) en cada una.
+        When(x => x.ListingType == ListingType.Auction, () =>
+        {
+            RuleFor(x => x.AuctionEndDate)
+                .NotNull()
+                    .WithMessage("The auction must have a closing date.")
+                .FutureDate()
+                    .WithMessage("The closing date must be in the future.");
+
+            RuleFor(x => x.ReservePrice)
+                .GreaterThan(0)
+                .Must((req, reserve) => reserve < req.Price)
+                    .WithMessage("The reserve price must be less than the starting price.");
+        });
+
+        // Unless es la negación a nivel de bloque, igual que el modificador por regla
+        Unless(x => x.RequiresShipping == false, () =>
+        {
+            RuleFor(x => x.WeightKg).GreaterThan(0).LessThan(1000);
+            RuleFor(x => x.ShippingAddress).NotNull().SetValidator(new AddressValidator());
+        });
+    }
+}
+```
+
+### Cuándo usar la forma de bloque en vez de la forma por regla
+
+Recurre al `When`/`Unless` a nivel de bloque cuando la **misma condición** protege a **varias llamadas a `RuleFor` sin relación entre sí** — elimina la repetición de escribir `.When(mismaCondicion)` al final de cada una. Para una sola regla (o una sola cadena de `RuleFor`), el `.When()` por regla documentado arriba se lee igual de claro y no necesita la estructura extra de bloque/lambda.
+
+### Anidamiento
+
+Los bloques `When`/`Unless` anidados se combinan con AND — una regla dentro de un bloque interno solo se ejecuta si **ambas** condiciones, la externa y la interna, son verdaderas:
+
+```csharp
+When(x => x.ListingType == ListingType.Auction, () =>
+{
+    RuleFor(x => x.AuctionEndDate).NotNull().FutureDate();
+
+    // Solo se ejecuta cuando AMBAS ListingType == Auction Y HasReservePrice son verdaderas
+    When(x => x.HasReservePrice, () =>
+    {
+        RuleFor(x => x.ReservePrice).GreaterThan(0);
+    });
+});
+```
+
+Las reglas definidas **fuera** de un bloque `When`/`Unless` nunca se ven afectadas por él, sin importar dónde estén declaradas en el constructor — antes o después del bloque.
 
 ---
 
@@ -548,3 +618,5 @@ public class PaymentRequestValidator : AbstractValidator<PaymentRequest>
 
 - **[CascadeMode](08-cascade-mode.md)** — Detener evaluación a nivel de validador completo
 - **[Resultado de validación](09-resultado-validacion.md)** — Cómo usar ErrorCodes y el resto de ValidationResult
+- **[Severidad](17-severidad.md)** — `.WithSeverity()`, el modificador que marca una regla como no bloqueante
+- **[Conjuntos de reglas](18-conjuntos-de-reglas.md)** — `.InRuleSet()`, etiquetar reglas para que se ejecuten solo en llamadas de validación específicas

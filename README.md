@@ -18,7 +18,7 @@ To add Vali-Mediator to your .NET project, install it via NuGet with the followi
 ```sh
 dotnet add package Vali-Validation
 ```
-- **Targets**: NET 7/8/9
+- **Targets**: NET 7/8/9/10
 - Dependencies: only **Microsoft.Extensions.DependencyInjection.Abstractions**
 
 ## 🚀 Quick Start
@@ -157,6 +157,78 @@ public class UserValidator : AbstractValidator<User>
 ```
 
 `GlobalCascadeMode` defaults to `CascadeMode.Continue` (validate everything, collect all errors) — the common case for surfacing every problem to the user at once. Note `ValidateParallelAsync()` always runs every rule regardless of `GlobalCascadeMode`, since early-stop and parallel execution are mutually exclusive by design.
+
+## Severity (Warnings vs Errors)
+
+Mark a rule as non-blocking with `.WithSeverity(Severity.Warning)` — it still shows up in the new
+`result.Failures`, but never flips `IsValid` to `false` and never appears in `Errors`/`ErrorCodes`:
+
+```csharp
+RuleFor(x => x.Discount)
+    .LessThanOrEqualTo(50)
+    .WithSeverity(Severity.Warning)
+    .WithMessage("Discount above 50% requires manager approval.");
+```
+
+## RuleSets
+
+Tag rules with `.InRuleSet("name")` and run only those rules for a given call via `IncludeRuleSets`:
+
+```csharp
+RuleFor(x => x.PaymentMethod).NotEmpty().InRuleSet("checkout");
+
+var result = validator.Validate(order, o => o.IncludeRuleSets("checkout"));
+```
+
+Untagged rules carry the implicit tag `"default"`; a plain `Validate(order)` call (no options)
+still runs everything regardless of tags.
+
+## Localization
+
+Built-in messages ship in English and Spanish, resolved automatically from
+`CultureInfo.CurrentUICulture`. Override per call or register your own language:
+
+```csharp
+var result = validator.Validate(dto, opts => opts.WithLanguage("es"));
+
+LanguageManager.RegisterLanguage("pt", new Dictionary<MessageKey, string> { /* ... */ });
+```
+
+## Global Configuration
+
+`ValiValidationOptions.Global` sets app-wide defaults once at startup — cascade mode, default
+language, and resolvers for the property/display names used in messages and error keys:
+
+```csharp
+ValiValidationOptions.Global.DefaultCascadeMode = CascadeMode.StopOnFirstFailure;
+ValiValidationOptions.Global.DefaultLanguage = "es";
+```
+
+## Reusable Custom Rules (PropertyValidator)
+
+Implement `IPropertyValidator<TProperty>` for a custom rule you want to unit-test or share across
+validators, instead of an inline `.Must(...)` predicate:
+
+```csharp
+public class EvenNumberValidator : IPropertyValidator<int>
+{
+    public bool IsValid(int value) => value % 2 == 0;
+    public IReadOnlyDictionary<string, string> Messages { get; } = new Dictionary<string, string>
+    {
+        ["en"] = "The {PropertyName} field must be an even number."
+    };
+}
+
+RuleFor(x => x.Age).SetPropertyValidator(new EvenNumberValidator());
+```
+
+## Nested Validators from DI (InjectValidator)
+
+Resolve a nested validator through `IServiceProvider` instead of constructing it yourself:
+
+```csharp
+RuleFor(x => x.Address).InjectValidator<Order, Address>(serviceProvider);
+```
 
 ## Error Handling & Result Format
 
@@ -354,11 +426,15 @@ With this setup, every *CreatePostCommand** is automatically validated—no manu
 - Automatic DI registration (**AddValidationsFromAssembly**)
 - Lightweight: minimal dependencies
 - Clean / Onion architecture–friendly
-
-### 🚧 Planned Features
-
-- Async rules (**MustAsync**)
-- Error message localization
+- Async rules (**MustAsync**, **DependentRuleAsync**), with `CancellationToken` propagated end to end
+- Severity-aware results (**Severity.Error/Warning/Info** via **WithSeverity**) — warnings surface without failing validation
+- **RuleSets** — tag rules with **InRuleSet** and run a subset via **IncludeRuleSets**
+- Block-level **When**/**Unless** to wrap multiple rules under one shared condition
+- **InjectValidator** — resolve nested validators from DI
+- Reusable custom rules via **IPropertyValidator&lt;T&gt;** / **PropertyValidator&lt;T&gt;**
+- Error message localization (English/Spanish built in, extensible via **LanguageManager.RegisterLanguage**)
+- App-wide defaults via **ValiValidationOptions.Global**
+- .NET 10 support
 
 Follow the project on GitHub for updates on new features and improvements!
 

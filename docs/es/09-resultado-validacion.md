@@ -1,30 +1,43 @@
 # Resultado de validación
 
-`ValidationResult` es el objeto que devuelven `Validate()` y `ValidateAsync()`. Contiene todos los errores encontrados durante la validación, agrupados por nombre de propiedad.
+`ValidationResult` es el objeto que devuelven `Validate()` y `ValidateAsync()`. Su verdadera fuente de verdad es `Failures` — una lista consciente de la severidad con todo lo que produjo la ejecución de validación. `Errors`/`ErrorCodes`/`IsValid` y el resto de la superficie clásica son vistas calculadas sobre `Failures`, filtradas a `Severity.Error` únicamente, mantenidas exactamente como se comportaban antes de que existiera la severidad.
 
 ---
 
 ## Estructura
 
 ```csharp
-public class ValidationResult
+public sealed class ValidationResult
 {
-    // Errores por propiedad: { "Email": ["No válido", "Ya existe"] }
-    public Dictionary<string, List<string>> Errors { get; }
+    // La fuente de verdad: todos los fallos producidos por esta ejecución, en cualquier severidad
+    public List<ValidationFailure> Failures { get; }
 
-    // Códigos de error por propiedad: { "Email": ["INVALID_FORMAT", "ALREADY_EXISTS"] }
-    public Dictionary<string, List<string>> ErrorCodes { get; }
-
-    // true si no hay errores
+    // true si no hay fallos Severity.Error (Warning/Info nunca lo afectan)
     public bool IsValid { get; }
 
-    // Número total de mensajes de error (suma de todos los errores de todas las propiedades)
+    // Vista de compatibilidad sobre Failures, filtrada a Severity.Error: { "Email": ["No válido", "Ya existe"] }
+    public IReadOnlyDictionary<string, List<string>> Errors { get; }
+
+    // Vista de compatibilidad sobre Failures, filtrada a Severity.Error con código de error no nulo
+    public IReadOnlyDictionary<string, List<string>> ErrorCodes { get; }
+
+    // Número total de fallos Severity.Error (suma de todas las propiedades)
     public int ErrorCount { get; }
 
-    // Nombres de propiedades que tienen errores
+    // Nombres de propiedades que tienen un fallo Severity.Error
     public IReadOnlyList<string> PropertyNames { get; }
 }
+
+public sealed class ValidationFailure
+{
+    public string PropertyName { get; }
+    public string Message { get; }
+    public Severity Severity { get; }   // Error (por defecto), Warning, o Info
+    public string? ErrorCode { get; }
+}
 ```
+
+> **Nota:** `Errors` y `ErrorCodes` son `IReadOnlyDictionary<string, List<string>>`, calculados de nuevo en cada acceso a partir de `Failures` — mutar el diccionario devuelto no tiene efecto sobre el `ValidationResult`. Usa `AddFailure`/`AddError` para agregar fallos en su lugar (ver abajo).
 
 ---
 
@@ -111,6 +124,25 @@ Console.WriteLine($"Propiedades con error: {string.Join(", ", failedProperties)}
 
 ---
 
+## Failures y severidad
+
+`Failures` es la lista completa que respalda todo lo demás en `ValidationResult`. Itérala directamente cuando necesites ver los fallos `Warning`/`Info`, que nunca aparecen en `Errors`/`ErrorCodes`:
+
+```csharp
+var result = await validator.ValidateAsync(request);
+
+foreach (var failure in result.Failures)
+{
+    Console.WriteLine($"[{failure.Severity}] {failure.PropertyName}: {failure.Message}");
+}
+
+var warnings = result.Failures.Where(f => f.Severity == Severity.Warning).ToList();
+```
+
+Consulta **[Severidad](17-severidad.md)** para el panorama completo: marcar una regla como no bloqueante con `.WithSeverity(Severity.Warning)`, la serialización JSON de `Failures`, y los casos en los que `WithSeverity` no aplica (reglas cross-property, `MustAsync`/`DependentRuleAsync`).
+
+---
+
 ## AddError
 
 `AddError` permite agregar errores manualmente a un `ValidationResult`. Útil para combinar validación con lógica de negocio:
@@ -121,6 +153,12 @@ result.AddError("Email", "El email ya está en uso.");
 
 // Con código de error
 result.AddError("Email", "El email ya está en uso.", "EMAIL_ALREADY_EXISTS");
+```
+
+`AddError` es un atajo para `AddFailure(property, message, Severity.Error, errorCode)`. Usa `AddFailure` directamente cuando quieras agregar un fallo no bloqueante desde código de aplicación:
+
+```csharp
+result.AddFailure("Discount", "Discount exceeds the recommended threshold.", Severity.Warning);
 ```
 
 Ejemplo de uso en un servicio que combina validación y lógica:
@@ -463,5 +501,6 @@ public class CreateProductValidatorTests
 
 ## Siguientes pasos
 
+- **[Severidad](17-severidad.md)** — `Failures`, `Severity.Warning`/`Info`, y cómo migrar desde el modelo v2.x basado solo en `Errors`
 - **[Excepciones](10-excepciones.md)** — ValidationException y ValidateAndThrow
 - **[ASP.NET Core](12-integracion-aspnetcore.md)** — Integración con middleware y filtros que usan ValidationResult

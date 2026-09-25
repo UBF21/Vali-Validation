@@ -1,6 +1,6 @@
 # Vali-Validation
 
-Vali-Validation is a lightweight, zero-dependency fluent validation library for .NET 7, 8, and 9. It provides a clean, expressive API for defining validation rules on your models, with full support for async validation, conditional rules, nested object validation, collection validation, cascade mode, error codes, custom rules, and seamless dependency injection — all without requiring any external dependencies beyond `Microsoft.Extensions.DependencyInjection.Abstractions`.
+Vali-Validation is a lightweight, zero-dependency fluent validation library for .NET 7, 8, 9, and 10. It provides a clean, expressive API for defining validation rules on your models, with full support for async validation, conditional rules, nested object validation, collection validation, cascade mode, error codes, custom rules, and seamless dependency injection — all without requiring any external dependencies beyond `Microsoft.Extensions.DependencyInjection.Abstractions`.
 
 ## Installation
 
@@ -203,11 +203,8 @@ converter required) as a single structured array:
 ```
 
 **`.WithSeverity()` scope**: like `.WithMessage()`/`.WithErrorCode()`, it only affects the last
-rule in a standard property chain (`.NotEmpty()`, `.Must()`, etc.) — it has no effect on
-`RequiredIf`/`EqualToProperty`/other cross-property rules, nor on `MustAsync`/`DependentRuleAsync`
-(both always produce `Severity.Error` regardless of any preceding or following `.WithSeverity()`
-call — calling it after an async rule silently has no effect, or silently reassigns severity to a
-different, earlier synchronous rule in the same chain if one exists).
+rule added — including `.MustAsync(...)`/`.DependentRuleAsync(...)`, which it now targets
+correctly. It has no effect on `RequiredIf`/`EqualToProperty`/other cross-property rules.
 
 ### Migrating from v2.x
 
@@ -314,11 +311,57 @@ public class MyValidator : AbstractValidator<MyDto>
 }
 ```
 
+## RuleSets
+
+Tag rules with `.InRuleSet(...)` and restrict a single `Validate`/`ValidateAsync` call to only the
+rule sets you name via `IncludeRuleSets(...)`. Rules with no `InRuleSet` call carry the implicit
+tag `"default"` and are skipped unless `"default"` is itself included:
+
+```csharp
+public class OrderValidator : AbstractValidator<Order>
+{
+    public OrderValidator()
+    {
+        RuleFor(x => x.CustomerName).NotEmpty(); // implicit "default" rule set
+
+        RuleFor(x => x.PaymentMethod)
+            .NotEmpty()
+            .InRuleSet("checkout");
+    }
+}
+
+// Runs only rules tagged "checkout"
+var result = validator.Validate(order, o => o.IncludeRuleSets("checkout"));
+
+// Runs every rule regardless of tag (same as always)
+var result = validator.Validate(order);
+```
+
+`InRuleSet(...)` is additive — call it multiple times (or pass multiple names) to tag a rule with
+more than one rule set. `ValidateAsync` supports the same `Action<ValidationOptions>` overload.
+
 ## Nested Validators
 
 ```csharp
 RuleFor(x => x.Address).SetValidator(new AddressValidator());
 ```
+
+Resolve the nested validator from DI instead of constructing it yourself with
+`.InjectValidator<T, TProperty>(IServiceProvider)` — useful when nested validators are registered
+via `AddValidationsFromAssembly` and the root validator receives an `IServiceProvider`:
+
+```csharp
+public class OrderValidator : AbstractValidator<Order>
+{
+    public OrderValidator(IServiceProvider serviceProvider)
+    {
+        RuleFor(x => x.Address).InjectValidator<Order, Address>(serviceProvider);
+    }
+}
+```
+
+Throws `InvalidOperationException` if no `IValidator<TProperty>` is registered, or if the registered
+implementation isn't an `AbstractValidator<TProperty>`.
 
 ## Collection Validation
 

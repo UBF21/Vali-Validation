@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- .NET SDK 7.0, 8.0 or 9.0
+- .NET SDK 7.0, 8.0, 9.0 or 10.0
 - Any compatible IDE: Visual Studio 2022+, Rider, VS Code with C# DevKit
 
 ## Available Packages

@@ -1,6 +1,6 @@
 # Vali-Validation Documentation (English)
 
-Welcome to the English documentation for **Vali-Validation**, the fluent validation library for .NET 7/8/9 from the Vali ecosystem.
+Welcome to the English documentation for **Vali-Validation**, the fluent validation library for .NET 7/8/9/10 from the Vali ecosystem.
 
 ---
 
@@ -47,6 +47,16 @@ Welcome to the English documentation for **Vali-Validation**, the fluent validat
 | 15 | [Advanced Patterns](15-advanced-patterns.md) | Nested validators with `SetValidator`, `Include` for inheritance, complex conditional validation, `RuleSwitch`/`SwitchOn` polymorphic validation, passwords, nested collections, `IRuleBuilder` extensions |
 | 16 | [Switch / Case](16-switch-case.md) | Complete `RuleSwitch` and `SwitchOn` reference: syntax, 12+ real-world examples (e-commerce, multi-tenant, loans, notifications, scientific measurements), decision tree, xUnit tests, anti-patterns |
 
+### Advanced Configuration
+
+| # | Document | Description |
+|---|---|---|
+| 17 | [Severity](17-severity.md) | `Severity.Warning`/`Info` vs `Error`, `.WithSeverity()`, `ValidationResult.Failures` as the source of truth, migrating from the v2.x `Errors`-only model |
+| 18 | [Rule Sets](18-rule-sets.md) | `.InRuleSet()`, `ValidationOptions.IncludeRuleSets`, running a subset of rules for one validation call |
+| 19 | [Localization](19-localization.md) | Built-in English/Spanish message catalogs, language resolution precedence, registering a new language with `LanguageManager` |
+| 20 | [Global Configuration](20-global-configuration.md) | `ValiValidationOptions.Global`: `DefaultCascadeMode`, `DefaultLanguage`, `DisplayNameResolver`, `PropertyNameResolver` |
+| 21 | [Property Validators](21-property-validators.md) | `IPropertyValidator<TProperty>`, `PropertyValidator<TProperty>`, `.SetPropertyValidator()` — reusable, independently-testable custom rules |
+
 ---
 
 ## Quick Reading Guide
@@ -79,6 +89,18 @@ Welcome to the English documentation for **Vali-Validation**, the fluent validat
 2. [Modifiers](07-modifiers.md) — `When`/`Unless`, `WhenAsync`/`UnlessAsync`
 3. [Advanced Patterns](15-advanced-patterns.md) — composition, inheritance, nested collections, `RuleSwitch`/`SwitchOn`
 
+### I need custom error handling with severities
+
+1. [Severity](17-severity.md) — mark rules `Warning`/`Info` so they don't block `IsValid`
+2. [Validation Result](09-validation-result.md) — `ValidationResult.Failures`, the severity-aware source of truth
+3. [Rule Sets](18-rule-sets.md) — restrict which rules even run for a given call
+
+### I need multi-language error messages
+
+1. [Localization](19-localization.md) — built-in English/Spanish catalogs, language resolution order
+2. [Global Configuration](20-global-configuration.md) — `ValiValidationOptions.Global.DefaultLanguage`
+3. [Property Validators](21-property-validators.md) — per-language `Messages` on custom rules
+
 ---
 
 ## Quick Rule Reference
@@ -99,7 +121,7 @@ Welcome to the English documentation for **Vali-Validation**, the fluent validat
 | Cross-property | `GreaterThanProperty`, `GreaterThanOrEqualToProperty`, `LessThanProperty`, `LessThanOrEqualToProperty`, `NotEqualToProperty`, `MultipleOfProperty` |
 | Conditional required | `RequiredIf`, `RequiredUnless` |
 | Conditional switch | `RuleSwitch` (validator-level), `SwitchOn` (property-level) |
-| Custom | `Must`, `MustAsync`, `DependentRuleAsync`, `Custom`, `Transform`, `SetValidator` |
+| Custom | `Must`, `MustAsync`, `DependentRuleAsync`, `Custom`, `Transform`, `SetValidator`, `InjectValidator`, `SetPropertyValidator` |
 
 ### Available Modifiers
 
@@ -107,12 +129,16 @@ Welcome to the English documentation for **Vali-Validation**, the fluent validat
 |---|---|
 | `.WithMessage(msg)` | Replaces the last rule's message |
 | `.WithErrorCode(code)` | Adds code to `ErrorCodes` for the last rule |
+| `.WithSeverity(severity)` | Marks the last rule `Warning`/`Info` instead of the default `Error` — see [Severity](17-severity.md) |
 | `.OverridePropertyName(name)` | Changes the key in `Errors` for the entire builder |
+| `.InRuleSet(names)` | Tags the builder's rule(s) to run only for matching `IncludeRuleSets` calls — see [Rule Sets](18-rule-sets.md) |
 | `.StopOnFirstFailure()` | Stops property evaluation on first failure |
 | `.When(condition)` | Applies rules only if condition is true |
 | `.Unless(condition)` | Applies rules only if condition is false |
 | `.WhenAsync(condition)` | `When` with async condition |
 | `.UnlessAsync(condition)` | `Unless` with async condition |
+
+> `AbstractValidator<T>` also exposes a block-level `When(condition, ruleBlock)`/`Unless(condition, ruleBlock)` for wrapping several `RuleFor` calls under one shared condition — see [Modifiers — Block-Level Conditions](07-modifiers.md#block-level-conditions).
 
 ---
 

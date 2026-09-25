@@ -81,6 +81,54 @@
             - IRuleBuilder&lt;T,TProperty&gt;.WithSeverity(Severity) — mark a rule as non-blocking.
             - CustomValidationContext&lt;T&gt;.AddFailure(..., Severity, ...) overloads — Custom()
               rules can now raise warnings too.
+
+            RuleSets (new, non-breaking):
+            - IRuleBuilder&lt;T,TProperty&gt;.InRuleSet(params string[]) tags a rule; additive across
+              calls. Rules with no InRuleSet call carry the implicit tag "default".
+            - Validate(instance, o =&gt; o.IncludeRuleSets("name")) / ValidateAsync(...) restrict a
+              single call to rules tagged with any of the named rule sets. Plain Validate(instance)/
+              ValidateAsync(instance) with no options still runs every rule regardless of tag.
+
+            Block-level When/Unless (new, non-breaking):
+            - Protected When(Func&lt;T,bool&gt;, Action)/Unless(Func&lt;T,bool&gt;, Action) on
+              AbstractValidator&lt;T&gt; wrap multiple RuleFor/RuleForEach calls in the constructor
+              under a single shared condition, instead of repeating .When(...)/.Unless(...) on each
+              rule. Nested blocks compose with AND.
+
+            InjectValidator (new, non-breaking):
+            - IRuleBuilder&lt;T,TProperty&gt;.InjectValidator&lt;T,TProperty&gt;(IServiceProvider)
+              resolves a nested IValidator&lt;TProperty&gt; from DI instead of requiring an
+              already-constructed instance, then delegates to SetValidator. Throws
+              InvalidOperationException if no IValidator&lt;TProperty&gt; is registered, or the
+              registered implementation isn't an AbstractValidator&lt;TProperty&gt;.
+
+            Localization (new, non-breaking):
+            - Built-in rule messages ship in English (default) and Spanish, resolved automatically
+              from CultureInfo.CurrentUICulture. Override per call with
+              Validate(instance, o =&gt; o.WithLanguage("es")), or set an app-wide default via
+              ValiValidationOptions.Global.DefaultLanguage.
+            - LanguageManager.RegisterLanguage("code", dictionary) adds a new language at startup;
+              partial catalogs are fine — any missing key falls back to English.
+
+            Global Configuration (new, non-breaking):
+            - ValiValidationOptions.Global exposes DefaultCascadeMode, DefaultLanguage,
+              DisplayNameResolver, and PropertyNameResolver as app-wide defaults set once at
+              startup, before any concurrent validation runs.
+
+            PropertyValidator (new, non-breaking):
+            - IPropertyValidator&lt;TProperty&gt; (and the PropertyValidator&lt;TProperty&gt;
+              convenience base) let you implement a custom rule as a reusable, unit-testable class
+              instead of an inline .Must(...) predicate. Attach with
+              RuleFor(x =&gt; x.Prop).SetPropertyValidator(new MyValidator()) — integrates with
+              WithSeverity/WithErrorCode/When/Unless/WithMessage like any other rule.
+
+            .NET 10 support:
+            - Multi-targeting extended to net7.0;net8.0;net9.0;net10.0.
+
+            Fixes:
+            - .WithMessage()/.WithErrorCode()/.WithSeverity()/.When()/.Unless() chained after
+              .MustAsync(...)/.DependentRuleAsync(...) now correctly apply to that async rule
+              instead of silently being dropped or reassigned to an earlier synchronous rule.
         </PackageReleaseNotes>
     </PropertyGroup>
 

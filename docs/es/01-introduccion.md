@@ -38,7 +38,7 @@ FluentValidation es excelente, pero en proyectos que usan Vali-Mediator o que bu
 | Reglas de colección | `Unique`, `AllSatisfy`, `In`, etc. | Parcial |
 | Tarjetas de crédito (Luhn) | `CreditCard()` | Sí |
 | Licencia | MIT | Apache 2.0 |
-| Targets | net7/8/9 | netstandard2.0+ |
+| Targets | net7/8/9/10 | netstandard2.0+ |
 
 > **Nota:** Si ya usas FluentValidation en un proyecto maduro con muchas reglas personalizadas, la migración puede no valer la pena solo por el cambio. Vali-Validation brilla especialmente en proyectos nuevos que usan Vali-Mediator o que quieren un stack completamente controlado.
 
@@ -93,12 +93,12 @@ Integración con **ASP.NET Core**. Incluye:
 
 ## Tabla de compatibilidad
 
-| Paquete | net7.0 | net8.0 | net9.0 |
-|---|---|---|---|
-| `Vali-Validation` | ✓ | ✓ | ✓ |
-| `Vali-Validation.MediatR` | ✓ | ✓ | ✓ |
-| `Vali-Validation.ValiMediator` | ✓ | ✓ | ✓ |
-| `Vali-Validation.AspNetCore` | ✓ | ✓ | ✓ |
+| Paquete | net7.0 | net8.0 | net9.0 | net10.0 |
+|---|---|---|---|---|
+| `Vali-Validation` | ✓ | ✓ | ✓ | ✓ |
+| `Vali-Validation.MediatR` | ✓ | ✓ | ✓ | ✓ |
+| `Vali-Validation.ValiMediator` | ✓ | ✓ | ✓ | ✓ |
+| `Vali-Validation.AspNetCore` | ✓ | ✓ | ✓ | ✓ |
 
 > El código fuente del core usa C# 11. No se usan características de C# 12+ (collection expressions `[]`, primary constructors en clases, etc.), por lo que es compatible con el toolchain de .NET 7 SDK en adelante.
 

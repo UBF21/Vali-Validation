@@ -185,6 +185,42 @@ public class OrderService : IOrderService
 
 ---
 
+## InjectValidator: resolver validadores anidados desde DI
+
+`SetValidator` (ver [Reglas avanzadas](06-reglas-avanzadas.md#setvalidator)) adjunta una instancia de validador anidado ya construida. `InjectValidator` es un wrapper delgado sobre él para el caso común en el que el validador anidado está registrado en DI y prefieres resolverlo en vez de construirlo a mano:
+
+```csharp
+IRuleBuilder<T, TProperty?> InjectValidator<T, TProperty>(IServiceProvider serviceProvider)
+    where T : class
+    where TProperty : class
+```
+
+```csharp
+public class CreateShipmentValidator : AbstractValidator<CreateShipmentRequest>
+{
+    public CreateShipmentValidator(IServiceProvider serviceProvider)
+    {
+        RuleFor(x => x.TrackingNumber).NotEmpty();
+
+        // Resuelve IValidator<Address> desde el contenedor en vez de `new AddressValidator()`
+        RuleFor(x => x.ShippingAddress)
+            .NotNull()
+                .WithMessage("The shipping address is required.")
+            .InjectValidator<CreateShipmentRequest, Address>(serviceProvider);
+    }
+}
+```
+
+Este es el mismo patrón ya mostrado para `SetValidator` en [Reglas avanzadas — SetValidator con dependencias](06-reglas-avanzadas.md#setvalidator), solo que sin tener que escribir tú mismo la llamada a `GetRequiredService<IValidator<TProperty>>()`. Requiere que:
+
+- `IValidator<TProperty>` esté registrado en el contenedor — p. ej. vía `AddValidationsFromAssembly` (ver arriba). `InjectValidator` lanza `InvalidOperationException` si no hay nada registrado.
+- La implementación registrada sea realmente un `AbstractValidator<TProperty>` — `InjectValidator` lanza `InvalidOperationException` si se trata de otra implementación de `IValidator<TProperty>`.
+- `serviceProvider` en sí no sea nulo — lanza `ArgumentNullException` en caso contrario.
+
+El propio constructor de `AbstractValidator<T>` es un destino de DI perfectamente normal, así que inyectarle `IServiceProvider` (como en el ejemplo de arriba) funciona sin ningún registro extra en ASP.NET Core — el contenedor incorporado resuelve `IServiceProvider` por sí mismo.
+
+---
+
 ## Ejemplo completo de Program.cs
 
 ```csharp

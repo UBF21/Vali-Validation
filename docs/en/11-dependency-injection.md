@@ -185,6 +185,42 @@ public class OrderService : IOrderService
 
 ---
 
+## InjectValidator: Resolving Nested Validators from DI
+
+`SetValidator` (see [Advanced Rules](06-advanced-rules.md#setvalidator)) attaches an already-constructed nested validator instance. `InjectValidator` is a thin wrapper over it for the common case where the nested validator is registered in DI and you'd rather resolve it than construct it by hand:
+
+```csharp
+IRuleBuilder<T, TProperty?> InjectValidator<T, TProperty>(IServiceProvider serviceProvider)
+    where T : class
+    where TProperty : class
+```
+
+```csharp
+public class CreateShipmentValidator : AbstractValidator<CreateShipmentRequest>
+{
+    public CreateShipmentValidator(IServiceProvider serviceProvider)
+    {
+        RuleFor(x => x.TrackingNumber).NotEmpty();
+
+        // Resolves IValidator<Address> from the container instead of `new AddressValidator()`
+        RuleFor(x => x.ShippingAddress)
+            .NotNull()
+                .WithMessage("The shipping address is required.")
+            .InjectValidator<CreateShipmentRequest, Address>(serviceProvider);
+    }
+}
+```
+
+This is the same pattern already shown for `SetValidator` in [Advanced Rules — SetValidator with Dependencies](06-advanced-rules.md#setvalidator), just without having to write the `GetRequiredService<IValidator<TProperty>>()` call yourself. It requires:
+
+- `IValidator<TProperty>` to be registered in the container — e.g. via `AddValidationsFromAssembly` (see above). `InjectValidator` throws `InvalidOperationException` if nothing is registered.
+- The registered implementation to actually be an `AbstractValidator<TProperty>` — `InjectValidator` throws `InvalidOperationException` if it's some other `IValidator<TProperty>` implementation.
+- `serviceProvider` itself to be non-null — throws `ArgumentNullException` otherwise.
+
+`AbstractValidator<T>`'s own constructor is a perfectly normal DI target, so injecting `IServiceProvider` into it (as in the example above) works with zero extra registration in ASP.NET Core — the built-in container resolves `IServiceProvider` itself.
+
+---
+
 ## Complete Program.cs Example
 
 ```csharp

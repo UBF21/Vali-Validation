@@ -407,6 +407,8 @@ RuleFor(x => x.NewEmail)
 
 > **Note:** `WhenAsync` only works when `ValidateAsync` is called. If `Validate` (synchronous) is called, rules with `WhenAsync` are skipped.
 
+> **Modifiers on `MustAsync`/`DependentRuleAsync`:** `.WithMessage()`, `.WithErrorCode()`, `.When()` and `.Unless()` chained directly after `MustAsync` or `DependentRuleAsync` apply correctly to that async rule, exactly as they would after any synchronous rule. (`.WithSeverity()` is the one exception — see [Severity](17-severity.md#where-severity-does-not-apply) for why it never affects an async rule.)
+
 ### Example: Conditional Permissions
 
 ```csharp
@@ -456,6 +458,74 @@ RuleFor(x => x.Price)
         return await _catalogs.IsFreeAsync(request.CatalogId, ct);
     });
 ```
+
+---
+
+## Block-Level Conditions
+
+Everything above is the **per-rule** `.When()`/`.Unless()` — chained onto a specific `RuleFor` builder, applying to the rules defined in that one chain. `AbstractValidator<T>` also exposes a **block-level** `When`/`Unless`, a different overload with a different purpose: wrapping several `RuleFor`/`RuleForEach` calls in the constructor so they all share one condition, without repeating `.When(...)` on each of them.
+
+```csharp
+protected void When(Func<T, bool> condition, Action ruleBlock)
+protected void Unless(Func<T, bool> condition, Action ruleBlock)
+```
+
+```csharp
+public class CreateListingValidator : AbstractValidator<CreateListingRequest>
+{
+    public CreateListingValidator()
+    {
+        RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Price).GreaterThan(0);
+
+        // Every RuleFor/RuleForEach inside this block is gated by ListingType == Auction —
+        // equivalent to calling .When(x => x.ListingType == ListingType.Auction) on each one.
+        When(x => x.ListingType == ListingType.Auction, () =>
+        {
+            RuleFor(x => x.AuctionEndDate)
+                .NotNull()
+                    .WithMessage("The auction must have a closing date.")
+                .FutureDate()
+                    .WithMessage("The closing date must be in the future.");
+
+            RuleFor(x => x.ReservePrice)
+                .GreaterThan(0)
+                .Must((req, reserve) => reserve < req.Price)
+                    .WithMessage("The reserve price must be less than the starting price.");
+        });
+
+        // Unless is the block-level negation, same as the per-rule modifier
+        Unless(x => x.RequiresShipping == false, () =>
+        {
+            RuleFor(x => x.WeightKg).GreaterThan(0).LessThan(1000);
+            RuleFor(x => x.ShippingAddress).NotNull().SetValidator(new AddressValidator());
+        });
+    }
+}
+```
+
+### When to Use the Block Form Instead of the Per-Rule Form
+
+Reach for the block-level `When`/`Unless` when the **same condition** guards **several unrelated `RuleFor` calls** — it removes the repetition of writing `.When(sameCondition)` at the end of each one. For a single rule (or a single `RuleFor` chain), the per-rule `.When()` documented above reads just as clearly and doesn't need the extra block/lambda structure.
+
+### Nesting
+
+Nested `When`/`Unless` blocks compose with AND — a rule inside an inner block only runs if **both** the outer and inner conditions are true:
+
+```csharp
+When(x => x.ListingType == ListingType.Auction, () =>
+{
+    RuleFor(x => x.AuctionEndDate).NotNull().FutureDate();
+
+    // Only runs when BOTH ListingType == Auction AND HasReservePrice are true
+    When(x => x.HasReservePrice, () =>
+    {
+        RuleFor(x => x.ReservePrice).GreaterThan(0);
+    });
+});
+```
+
+Rules defined **outside** a `When`/`Unless` block are never affected by it, regardless of where in the constructor they're declared — before or after the block.
 
 ---
 
@@ -548,3 +618,5 @@ public class PaymentRequestValidator : AbstractValidator<PaymentRequest>
 
 - **[CascadeMode](08-cascade-mode.md)** — Stop evaluation at the entire validator level
 - **[Validation Result](09-validation-result.md)** — How to use ErrorCodes and the rest of ValidationResult
+- **[Severity](17-severity.md)** — `.WithSeverity()`, the modifier that marks a rule as non-blocking
+- **[Rule Sets](18-rule-sets.md)** — `.InRuleSet()`, tagging rules to run only for specific validation calls

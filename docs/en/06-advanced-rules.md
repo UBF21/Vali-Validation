@@ -145,6 +145,8 @@ public class RegisterUserValidator : AbstractValidator<RegisterUserRequest>
 
 > **Performance:** If you have multiple independent `MustAsync` calls, consider using `ValidateParallelAsync` to execute them in parallel. See [Validators](04-validators.md).
 
+> **Modifiers:** `.WithMessage()`, `.WithErrorCode()`, `.When()` and `.Unless()` chained directly after `MustAsync` correctly apply to that rule, same as after any synchronous rule — see [Modifiers](07-modifiers.md). The one exception is `.WithSeverity()`, which never affects a `MustAsync` rule; see [Severity](17-severity.md#where-severity-does-not-apply).
+
 ---
 
 ## DependentRuleAsync
