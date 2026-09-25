@@ -15,6 +15,7 @@ namespace Vali_Validation.Tests;
 /// config, and PropertyValidator. Individual feature files already cover each in isolation — these
 /// tests exercise realistic combinations that only surface bugs at the seams between features.
 /// </summary>
+[Collection("Global state")]
 public class FluentValidationDifferentiatorsIntegrationTests
 {
     // -------------------------------------------------------------------------

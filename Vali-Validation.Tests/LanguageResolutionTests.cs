@@ -17,6 +17,7 @@ public class LanguageResolutionValidator : AbstractValidator<LanguageResolutionD
     }
 }
 
+[Collection("Global state")]
 public class LanguageResolutionTests
 {
     [Fact]

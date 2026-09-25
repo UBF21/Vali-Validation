@@ -38,6 +38,7 @@ public class NotSpaceSlugValidator : AbstractValidator<PropertyValidatorDto>
     public NotSpaceSlugValidator() => RuleFor(x => x.Slug).SetPropertyValidator(new NotSpaceValidator());
 }
 
+[Collection("Global state")]
 public class PropertyValidatorTests
 {
     [Fact]

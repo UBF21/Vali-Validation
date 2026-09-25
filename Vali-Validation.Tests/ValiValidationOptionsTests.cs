@@ -51,6 +51,7 @@ public class MultipleOfPropertyValidator : AbstractValidator<CrossPropertyDto>
     }
 }
 
+[Collection("Global state")]
 public class ValiValidationOptionsTests : IDisposable
 {
     // Reset global state after every test — these are process-wide statics, and leaking a
