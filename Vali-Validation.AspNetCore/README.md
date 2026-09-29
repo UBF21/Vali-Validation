@@ -2,6 +2,9 @@
 
 ASP.NET Core integration for [Vali-Validation](https://github.com/UBF21/Vali-Validation). Provides middleware, endpoint filters, and action filter attributes for automatic HTTP request validation.
 
+- **Targets**: net7.0 / net8.0 / net9.0 / net10.0
+- Depends on `Vali-Validation` 3.0.0+ — Severity-aware `ValidationResult`, RuleSets, Localization, `ValiValidationOptions.Global`, and `PropertyValidator` all work transparently through this package's middleware, filter, and attribute.
+
 ## Installation
 
 ```bash
@@ -89,6 +92,8 @@ When validation fails, the response is HTTP 400 with `Content-Type: application/
   }
 }
 ```
+
+> **Severity note:** the middleware, filter, and attribute all build this response from `ValidationResult.Errors`, which only reflects `Severity.Error` failures. A rule marked `.WithSeverity(Severity.Warning)` (or `Severity.Info`) never appears in the 400 response, even if it failed — read the full result via `IValidator<T>.ValidateAsync` yourself if you need to surface warnings to the client.
 
 ---
 

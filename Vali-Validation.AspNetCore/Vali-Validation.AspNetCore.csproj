@@ -7,7 +7,7 @@
 
     <!-- Package identity -->
     <PackageId>Vali-Validation.AspNetCore</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Title>Vali-Validation.AspNetCore</Title>
     <Product>Vali-Validation.AspNetCore</Product>
     <Authors>Felipe Rafael Montenegro Morriberon</Authors>
@@ -43,6 +43,13 @@
     </Description>
 
     <PackageReleaseNotes>
+      v1.1.0
+      - Adds net10.0 to the multi-targeted frameworks (now net7.0/net8.0/net9.0/net10.0).
+      - Now depends on Vali-Validation 3.0.0+, which brings Severity-aware ValidationResult,
+        RuleSets, block-level When/Unless, InjectValidator, Localization (English/Spanish built in),
+        ValiValidationOptions.Global, and PropertyValidator to any validator used through this
+        package's middleware/filter/attribute. No changes to this package's own public API.
+
       v1.0.0 — Initial release.
       - ValiValidationMiddleware catches ValidationException, returns RFC 7807 problem+json.
       - ValiValidationFilter&lt;T&gt; (IEndpointFilter) for Minimal API endpoint validation.
@@ -67,6 +74,6 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="..\Vali-Validation\Vali-Validation.csproj" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />
   </ItemGroup>
 </Project>

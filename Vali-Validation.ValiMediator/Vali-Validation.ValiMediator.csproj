@@ -8,7 +8,7 @@
 
         <!-- Package identity -->
         <PackageId>Vali-Validation.ValiMediator</PackageId>
-        <Version>1.0.0</Version>
+        <Version>1.1.0</Version>
         <Title>Vali-Validation.ValiMediator</Title>
         <Product>Vali-Validation.ValiMediator</Product>
         <Authors>Felipe Rafael Montenegro Morriberon</Authors>
@@ -44,6 +44,13 @@
         </Description>
 
         <PackageReleaseNotes>
+            v1.1.0
+            - Adds net10.0 to the multi-targeted frameworks (now net7.0/net8.0/net9.0/net10.0).
+            - Now depends on Vali-Validation 3.0.0+, which brings Severity-aware ValidationResult,
+              RuleSets, block-level When/Unless, InjectValidator, Localization (English/Spanish
+              built in), ValiValidationOptions.Global, and PropertyValidator to any validator run
+              through this pipeline behavior. No changes to this package's own public API.
+
             v1.0.0 — Initial release of Vali-Validation.ValiMediator.
             - ValidationBehavior&lt;TRequest, TResponse&gt; implementing Vali-Mediator IPipelineBehavior.
             - Validates request via IValidator&lt;TRequest&gt; resolved from DI.
@@ -68,7 +75,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Vali-Validation\Vali-Validation.csproj" />
         <PackageReference Include="Vali-Mediator" Version="2.0.1" />
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />
     </ItemGroup>
 
 </Project>

@@ -2,6 +2,9 @@
 
 [MediatR](https://github.com/jbogard/MediatR) pipeline behavior integration for [Vali-Validation](https://github.com/UBF21/Vali-Validation). Automatically validates `IRequest<T>` objects before they reach their handler.
 
+- **Targets**: net7.0 / net8.0 / net9.0 / net10.0
+- Depends on `Vali-Validation` 3.0.0+ — Severity-aware `ValidationResult`, RuleSets, Localization, `ValiValidationOptions.Global`, and `PropertyValidator` all work transparently through this pipeline behavior.
+
 ## Installation
 
 ```bash
@@ -70,7 +73,8 @@ try
 }
 catch (ValidationException ex)
 {
-    // ex.Errors: Dictionary<string, List<string>>
+    // ex.ValidationResult.Errors: IReadOnlyDictionary<string, List<string>> — Severity.Error failures only.
+    // ex.ValidationResult.Failures: List<ValidationFailure> — every failure, including Warning/Info severities.
 }
 ```
 

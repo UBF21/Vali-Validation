@@ -2,6 +2,9 @@
 
 [Vali-Mediator](https://github.com/UBF21/Vali-Mediator) pipeline behavior integration for [Vali-Validation](https://github.com/UBF21/Vali-Validation). Automatically validates `IRequest<T>` objects before they reach their handler, with first-class support for `Result<T>`-based flows — no exceptions needed.
 
+- **Targets**: net7.0 / net8.0 / net9.0 / net10.0
+- Depends on `Vali-Validation` 3.0.0+ — Severity-aware `ValidationResult`, RuleSets, Localization, `ValiValidationOptions.Global`, and `PropertyValidator` all work transparently through this pipeline behavior.
+
 ## Installation
 
 ```bash
@@ -85,6 +88,8 @@ When `TResponse` is `Result<T>`, errors are returned as `Dictionary<string, List
   "Email": ["'Email' is not a valid email address."]
 }
 ```
+
+> **Severity note:** this behavior builds `errors` from `ValidationResult.Errors`, which only reflects `Severity.Error` failures. A rule marked `.WithSeverity(Severity.Warning)` (or `Severity.Info`) never triggers a `Result.Fail(...)` on its own and never appears here.
 
 ## Tip: Exception-based Flow
 
