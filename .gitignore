@@ -22,3 +22,6 @@ packages/
 CLAUDE.md
 .claude/review-ok/
 docs/superpowers/
+
+# Generated NuGet packages, not tracked in source control
+artifacts/
