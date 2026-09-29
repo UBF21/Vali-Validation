@@ -36,11 +36,14 @@
         <PackageIcon>VV.png</PackageIcon>
 
         <Description>
-            MediatR integration for Vali-Validation. Adds a ValidationBehavior&lt;TRequest, TResponse&gt;
-            pipeline behavior that automatically validates IRequest objects using Vali-Validation
-            before they reach their handler. Throws ValidationException on failure.
-            Use Vali-Mediator.Validation instead if you use Vali-Mediator — it provides
-            richer integration with Result&lt;T&gt; support (no exceptions needed).
+            MediatR integration for Vali-Validation. Targets net7.0/net8.0/net9.0/net10.0. Adds a
+            ValidationBehavior&lt;TRequest, TResponse&gt; pipeline behavior that automatically
+            validates IRequest objects using Vali-Validation before they reach their handler.
+            Throws ValidationException on failure. Pinned to MediatR 12.4.1 (the last fully
+            Apache-licensed release) so installing this package never pulls in MediatR's
+            commercial license requirement. Use Vali-Validation.ValiMediator instead if you use
+            Vali-Mediator — it provides richer integration with Result&lt;T&gt; support (no
+            exceptions needed) and stays free.
         </Description>
 
         <PackageReleaseNotes>

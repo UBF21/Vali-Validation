@@ -36,10 +36,11 @@
         <PackageIcon>VV.png</PackageIcon>
 
         <Description>
-            Vali-Mediator integration for Vali-Validation. Adds a ValidationBehavior&lt;TRequest, TResponse&gt;
-            that validates IRequest objects before they reach their handler.
-            When TResponse is Result&lt;T&gt;, validation failures are returned as Result.Fail(errors, ErrorType.Validation)
-            — no exceptions needed. For other response types, throws ValidationException.
+            Vali-Mediator integration for Vali-Validation. Targets net7.0/net8.0/net9.0/net10.0.
+            Adds a ValidationBehavior&lt;TRequest, TResponse&gt; that validates IRequest objects
+            before they reach their handler. When TResponse is Result&lt;T&gt;, validation
+            failures are returned as Result.Fail(errors, ErrorType.Validation) — no exceptions
+            needed. For other response types, throws ValidationException.
             Package name: Vali-Validation.ValiMediator. Requires Vali-Mediator.
         </Description>
 

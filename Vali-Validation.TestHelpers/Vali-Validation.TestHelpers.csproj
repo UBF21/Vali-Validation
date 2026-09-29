@@ -36,11 +36,11 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
         <Description>
-            Test-assertion helpers for Vali-Validation. Adds fluent ShouldHaveValidationErrorFor /
-            ShouldNotHaveValidationErrorFor extensions on ValidationResult. Framework-agnostic —
-            throws ValidationAssertionException on failure, which any test runner (xUnit, NUnit,
-            MSTest) fails the test on as an unhandled exception, without requiring a dependency
-            on that runner from this package.
+            Test-assertion helpers for Vali-Validation. Targets net7.0/net8.0/net9.0/net10.0. Adds
+            fluent ShouldHaveValidationErrorFor / ShouldNotHaveValidationErrorFor extensions on
+            ValidationResult. Framework-agnostic — throws ValidationAssertionException on failure,
+            which any test runner (xUnit, NUnit, MSTest) fails the test on as an unhandled
+            exception, without requiring a dependency on that runner from this package.
         </Description>
 
         <PackageReleaseNotes>
