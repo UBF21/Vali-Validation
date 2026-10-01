@@ -1,0 +1,335 @@
+name: CI
+
+# Pull requests, pushes a main y reuso desde release.yml (workflow_call). Único check requerido para
+# branch protection: "CI OK".
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+    inputs:
+      version-suffix:
+        description: Prerelease label agregado a cada versión de paquete (ej. rc.1). Vacío empaqueta las versiones declaradas en los csproj.
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+# El group debe diferir del de release.yml; si no, el workflow llamado se cancela a sí mismo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build:
+    name: Build (warnings as errors)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            7.0.x
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore Vali-Validation.sln
+
+      - name: Build
+        run: dotnet build Vali-Validation.sln -c Release --no-restore -p:TreatWarningsAsErrors=true
+
+  test:
+    name: test / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Los proyectos *.Tests solo targetean net10.0 (a diferencia de las librerías, que son
+        # multi-target net7/8/9/10) — por eso la matrix es solo por OS, no por TFM. El build de arriba
+        # ya cubre que las librerías compilen en los 4 TFMs.
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+
+      - name: Environment
+        shell: bash
+        run: |
+          mkdir -p logs
+          { echo "### ${{ matrix.os }}"; uname -a || true; dotnet --info; } 2>&1 | tee logs/00-environment.log
+
+      - name: Restore
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet restore Vali-Validation.sln 2>&1 | tee logs/01-restore.log
+
+      - name: Build
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet build Vali-Validation.sln -c Release --no-restore -v:minimal -bl:logs/build.binlog 2>&1 | tee logs/02-build.log
+
+      # Cada proyecto corre aunque uno anterior falle, así el trace siempre tiene el resultado completo.
+      - name: Unit tests with coverage
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          for project in Vali-Validation.Tests Vali-Validation.AspNetCore.Tests Vali-Validation.MediatR.Tests Vali-Validation.ValiMediator.Tests Vali-Validation.TestHelpers.Tests; do
+            echo "::group::$project"
+            dotnet test "$project" -c Release --no-build -f net10.0 \
+              --logger "console;verbosity=detailed" \
+              --logger "trx;LogFileName=$project.trx" \
+              --collect:"XPlat Code Coverage" --results-directory "TestResults/$project" \
+              2>&1 | tee "logs/03-test-$project.log" || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+      - name: Test totals
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          rows = ["| Project | Total | Passed | Failed | Skipped |", "|---|---:|---:|---:|---:|"]
+          for path in sorted(glob.glob("TestResults/**/*.trx", recursive=True)):
+              counters = ET.parse(path).getroot().find(".//{*}Counters")
+              if counters is None:
+                  continue
+              name = os.path.basename(path)[:-4]
+              failed = int(counters.get("failed", 0))
+              skipped = int(counters.get("total", 0)) - int(counters.get("executed", 0))
+              rows.append(f"| {name} | {counters.get('total')} | {counters.get('passed')} | {failed}{' (!)' if failed else ''} | {skipped} |")
+          report = "### Tests ${{ matrix.os }}\n\n" + "\n".join(rows) + "\n"
+          print(report)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write(report + "\n")
+          PY
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload full trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trace-${{ matrix.os }}
+          path: |
+            logs/**
+            TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 14
+
+  coverage:
+    name: Coverage gate
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage
+
+      - name: Merge reports and enforce el gate por librería
+        run: |
+          python3 - <<'PY'
+          import glob
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+
+          # Umbrales por librería — fijados sobre la cobertura real medida al armar este pipeline
+          # (Vali-Validation 97.3%, AspNetCore 73.1%, MediatR 100%, ValiMediator 69.2%, TestHelpers 100%),
+          # con margen hacia abajo para no romper el primer run. Subirlos a medida que se agreguen tests,
+          # nunca bajarlos para que pase un PR puntual.
+          THRESHOLDS = {
+              "Vali-Validation": 90.0,
+              "Vali-Validation.AspNetCore": 65.0,
+              "Vali-Validation.MediatR": 90.0,
+              "Vali-Validation.ValiMediator": 60.0,
+              "Vali-Validation.TestHelpers": 90.0,
+          }
+          OSES = ["ubuntu-latest", "windows-latest"]
+
+          missing = [f"coverage-{os_name}" for os_name in OSES
+                     if not glob.glob(f"coverage/coverage-{os_name}/**/coverage.cobertura.xml", recursive=True)]
+
+          # Las rutas de Cobertura son relativas a un <source> distinto por OS, así que un archivo se
+          # identifica por sus últimos dos segmentos de ruta (carpeta/archivo.cs). Las líneas se unen
+          # entre OSes: una línea cuenta como cubierta si cualquier corrida la tocó.
+          lines = {lib: {} for lib in THRESHOLDS}
+          reports = glob.glob("coverage/**/coverage.cobertura.xml", recursive=True)
+          for path in reports:
+              for package in ET.parse(path).getroot().iter("package"):
+                  store = lines.get(package.get("name"))
+                  if store is None:
+                      continue
+                  for cls in package.iter("class"):
+                      parts = cls.get("filename").replace("\\", "/").split("/")
+                      file_key = "/".join(parts[-2:])
+                      for line in cls.iter("line"):
+                          key = (file_key, int(line.get("number")))
+                          store[key] = max(store.get(key, 0), int(line.get("hits")))
+
+          rows = ["| Library | Lines | Covered | Line coverage | Gate | Threshold |", "|---|---:|---:|---:|:---:|---:|"]
+          failed = []
+          for lib, threshold in THRESHOLDS.items():
+              total = len(lines[lib])
+              covered = sum(1 for hits in lines[lib].values() if hits > 0)
+              pct = 100.0 * covered / total if total else 0.0
+              ok = total > 0 and pct >= threshold
+              if not ok:
+                  failed.append(lib)
+              rows.append(f"| {lib} | {total} | {covered} | {pct:.1f}% | {'pass' if ok else 'FAIL'} | {threshold:g}% |")
+
+          report = (f"### Unit-test line coverage ({len(reports)} reports merged)\n\n"
+                    + "\n".join(rows)
+                    + f"\n\nExpected cells: {', '.join(OSES)}\n"
+                    + (f"\nMissing reports: {', '.join(missing)}\n" if missing else "\nAmbos OS presentes.\n"))
+          print(report)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write(report + "\n")
+          if missing:
+              sys.exit("Coverage gate failed: missing reports for " + ", ".join(missing))
+          if failed:
+              sys.exit("Coverage gate failed for: " + ", ".join(failed))
+          PY
+
+  pack:
+    name: Pack NuGet packages
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      VERSION_SUFFIX: ${{ inputs.version-suffix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            7.0.x
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Apply el prerelease label
+        if: ${{ inputs.version-suffix != '' }}
+        run: |
+          if ! [[ "$VERSION_SUFFIX" =~ ^[0-9A-Za-z.-]+$ ]]; then
+            echo "::error::version-suffix solo puede tener letras, dígitos, puntos y guiones"
+            exit 1
+          fi
+          # Cada csproj mantiene su propio Version; el label se agrega por proyecto, así los paquetes de
+          # extensión dependen de la prerelease correcta del core.
+          cat > Directory.Build.targets <<'XML'
+          <Project>
+            <PropertyGroup Condition="'$(PrereleaseLabel)' != ''">
+              <Version>$(Version)-$(PrereleaseLabel)</Version>
+            </PropertyGroup>
+          </Project>
+          XML
+
+      - name: Pack el core primero, luego las extensiones
+        run: |
+          for project in Vali-Validation Vali-Validation.AspNetCore Vali-Validation.MediatR Vali-Validation.ValiMediator Vali-Validation.TestHelpers; do
+            dotnet pack "$project/$project.csproj" -c Release -o artifacts ${VERSION_SUFFIX:+-p:PrereleaseLabel="$VERSION_SUFFIX"}
+          done
+
+      - name: Verify package contents
+        run: |
+          python3 - <<'PY'
+          import glob
+          import sys
+          import xml.etree.ElementTree as ET
+          import zipfile
+
+          CORE = "Vali-Validation"
+          PACKAGES = {CORE, "Vali-Validation.AspNetCore", "Vali-Validation.MediatR",
+                      "Vali-Validation.ValiMediator", "Vali-Validation.TestHelpers"}
+          TFMS = {"net7.0", "net8.0", "net9.0", "net10.0"}
+
+          errors = []
+          found = {}
+          for path in sorted(glob.glob("artifacts/*.nupkg")):
+              with zipfile.ZipFile(path) as archive:
+                  names = archive.namelist()
+                  root = ET.fromstring(archive.read(next(n for n in names if n.endswith(".nuspec"))))
+              ns = {"n": root.tag.split("}")[0].strip("{")}
+              pid = root.find("n:metadata/n:id", ns).text
+              version = root.find("n:metadata/n:version", ns).text
+              libs = {n.split("/")[1] for n in names if n.startswith("lib/") and n.endswith(".dll")}
+              deps = {}
+              for group in root.iterfind(".//n:dependencies/n:group", ns):
+                  for dep in group.iterfind("n:dependency", ns):
+                      if dep.get("id") == CORE:
+                          deps[group.get("targetFramework")] = dep.get("version")
+              found[pid] = (version, libs, deps)
+
+          for pid in sorted(PACKAGES - set(found)):
+              errors.append(f"{pid}: package missing from artifacts/")
+          core_version = found.get(CORE, (None,))[0]
+          for pid, (version, libs, deps) in sorted(found.items()):
+              if libs != TFMS:
+                  errors.append(f"{pid} {version}: lib/ has {sorted(libs)}, expected {sorted(TFMS)}")
+              if pid == CORE:
+                  continue
+              for tfm in sorted(TFMS):
+                  dep = deps.get(tfm)
+                  if dep is None:
+                      errors.append(f"{pid} {version}: no {CORE} dependency for {tfm}")
+                  elif dep != core_version:
+                      errors.append(f"{pid} {version}: depends on {CORE} {dep} for {tfm}, expected {core_version}")
+
+          for pid, (version, libs, deps) in sorted(found.items()):
+              print(f"{pid} {version}: lib {sorted(libs)} | {CORE} dependency {sorted(set(deps.values())) or '-'}")
+          if errors:
+              sys.exit("Package check failed:\n  " + "\n  ".join(errors))
+          print("Package check passed.")
+          PY
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [build, test, coverage, pack]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job must have succeeded
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -Eq '"(failure|cancelled|skipped)"'; then
+            exit 1
+          fi

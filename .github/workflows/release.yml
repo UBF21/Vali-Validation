@@ -1,0 +1,95 @@
+name: Release
+
+# Solo manual. Por default corre el CI completo (build, test, coverage gate, pack) y sube los paquetes
+# NuGet empaquetados como artifact del workflow; no publica nada. Publicar necesita AMBOS `publish: true`
+# y una aprobación del environment `nuget` (Settings > Environments > nuget > Required reviewers), y usa
+# el secret NUGET_API_KEY de ese environment.
+#
+# Orden de publicación: el core (Vali-Validation) primero, luego los paquetes de extensión, porque las
+# extensiones dependen de él.
+on:
+  workflow_dispatch:
+    inputs:
+      version-suffix:
+        description: Prerelease label agregado a cada versión de paquete, ej. rc.1 (vacío = versiones de los csproj)
+        type: string
+        required: false
+        default: ''
+      publish:
+        description: Publicar los paquetes a NuGet.org después de la aprobación del environment nuget
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI (build, test, coverage gate, pack)
+    uses: ./.github/workflows/ci.yml
+    with:
+      version-suffix: ${{ inputs.version-suffix }}
+    secrets: inherit
+
+  publish:
+    name: Publish to NuGet (needs approval)
+    needs: ci
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    environment: nuget
+    env:
+      NUGET_SOURCE: https://api.nuget.org/v3/index.json
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          path: artifacts
+
+      - name: Every package must contain net10.0 (and net7.0, net8.0, net9.0)
+        run: |
+          for package in artifacts/*.nupkg; do
+            for tfm in net7.0 net8.0 net9.0 net10.0; do
+              unzip -l "$package" | grep -q "lib/$tfm/" || { echo "::error::$package has no lib/$tfm"; exit 1; }
+            done
+          done
+
+      - name: Push el core
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "::error::NUGET_API_KEY no está seteado en el environment nuget"
+            exit 1
+          fi
+          # El core es el único paquete cuyo id está seguido por un dígito de versión (Vali-Validation.<dígito>...).
+          dotnet nuget push artifacts/Vali-Validation.[0-9]*.nupkg --source "$NUGET_SOURCE" --api-key "$NUGET_API_KEY" --skip-duplicate
+
+      - name: Wait until NuGet.org lists el core
+        run: |
+          core=$(basename artifacts/Vali-Validation.[0-9]*.nupkg .nupkg)
+          version=$(echo "${core#Vali-Validation.}" | tr '[:upper:]' '[:lower:]')
+          for attempt in $(seq 1 40); do
+            if curl -fsS "https://api.nuget.org/v3-flatcontainer/vali-validation/index.json" | grep -q "\"$version\""; then
+              echo "Vali-Validation $version is indexed"
+              exit 0
+            fi
+            echo "attempt $attempt/40: Vali-Validation $version not indexed yet"
+            sleep 30
+          done
+          echo "::error::Vali-Validation $version was not indexed in time; re-run this job (--skip-duplicate makes it safe)"
+          exit 1
+
+      - name: Push los paquetes de extensión
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          for package in artifacts/Vali-Validation.*.nupkg; do
+            case "$(basename "$package")" in
+              Vali-Validation.[0-9]*) continue ;;
+            esac
+            dotnet nuget push "$package" --source "$NUGET_SOURCE" --api-key "$NUGET_API_KEY" --skip-duplicate
+          done
